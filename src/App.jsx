@@ -2,18 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { detectTeeth, exportImage } from "./api";
 import Logo from "./assets/logo.svg";
-import ControlPanel from "./components/ControlPanel.jsx";
-import Spinner from "./components/Spinner.jsx";
-
-const LABEL_OPTIONS = [
-  { id: "caries", text: "Кариес", icon: "🦷" },
-  { id: "pulpitis", text: "Пульпит", icon: "🔴" },
-  { id: "periodontitis", text: "Периодонтит", icon: "⚠️" },
-  { id: "crack", text: "Трещина", icon: "⚡" },
-  { id: "extraction", text: "Удаление", icon: "✖️" },
-  { id: "implant", text: "Имплант", icon: "🔩" },
-  { id: "crown", text: "Коронка", icon: "👑" }
-];
+import DetectionPanel from "./components/DetectionPanel.jsx";
+import EditPanel from "./components/EditPanel.jsx";
+import ExportPanel from "./components/ExportPanel.jsx";
+import FileUploadPanel from "./components/FileUploadPanel.jsx";
+import ImageAdjustPanel from "./components/ImageAdjustPanel.jsx";
+import { useProcessImage } from "./hooks/useProcessImage.js";
 
 function App() {
   const imageRef = useRef(null);
@@ -23,6 +17,11 @@ function App() {
   const hintShownRef = useRef(false);
 
   const [imageSrc, setImageSrc] = useState(null);
+  const [rotation, setRotation] = useState(0);
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [crop, setCrop] = useState(null);
+
   const [jawType, setJawType] = useState("auto");
   const [detectedJawType, setDetectedJawType] = useState(null);
 
@@ -33,12 +32,13 @@ function App() {
   const [displaySize, setDisplaySize] = useState({ width: 1, height: 1 });
 
   const [fileName, setFileName] = useState(null);
+  const [dragState, setDragState] = useState(null);
+  const { processImage } = useProcessImage();
+
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLabelMenuOpen, setIsLabelMenuOpen] = useState(false);
   const [showEditHint, setShowEditHint] = useState(false);
-
-  const [dragState, setDragState] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -50,16 +50,26 @@ function App() {
       setImageSrc(src);
 
       const image = new Image();
-      image.onload = () =>
+      image.onload = () => {
         setOriginalSize({
           width: image.naturalWidth,
           height: image.naturalHeight
         });
+
+        setCrop({
+          x: 0,
+          y: 0,
+          width: image.naturalWidth,
+          height: image.naturalHeight
+        });
+      };
+
       image.src = src;
     };
 
     reader.readAsDataURL(file);
 
+    setRotation(0);
     setDetections([]);
     setJawType("auto");
     setDetectedJawType(null);
@@ -76,20 +86,41 @@ function App() {
     setDetectedJawType(null);
 
     try {
-      const result = await detectTeeth({ image: imageSrc, jawType });
+      const processedImage = await processImage({
+        imageSrc,
+        rotation,
+        brightness,
+        contrast,
+        crop
+      });
+
+      const result = await detectTeeth({
+        image: processedImage,
+        jawType
+      });
+
+      const cropOffsetX = crop?.x ?? 0;
+      const cropOffsetY = crop?.y ?? 0;
 
       setDetections(
         result.detections.map((detection) => {
-          const center_x = (detection.x_min + detection.x_max) / 2;
-          const center_y = (detection.y_min + detection.y_max) / 2;
-          const width = detection.x_max - detection.x_min;
-          const height = detection.y_max - detection.y_min;
+          const x_min = detection.x_min + cropOffsetX;
+          const x_max = detection.x_max + cropOffsetX;
+          const y_min = detection.y_min + cropOffsetY;
+          const y_max = detection.y_max + cropOffsetY;
+
+          const label_x = (x_min + x_max) / 2;
+          const label_y = y_min * 0.75 + y_max * 0.25;
 
           return {
             ...detection,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
             label: null,
-            label_x: center_x + width * 0.6,
-            label_y: center_y - height * 0.6
+            label_x,
+            label_y
           };
         })
       );
@@ -132,8 +163,8 @@ function App() {
 
   const deleteSelectedDetection = useCallback(() => {
     if (selectedIndex === null) return;
-    setDetections((value) => value.filter((_, index) => index !== selectedIndex));
     setSelectedIndex(null);
+    setDetections((value) => value.filter((_, index) => index !== selectedIndex));
   }, [selectedIndex]);
 
   const updateDetection = (index, updates) => {
@@ -189,6 +220,51 @@ function App() {
         updateDetection(index, {
           label_x: initialDetection.label_x + deltaX,
           label_y: initialDetection.label_y + deltaY
+        });
+      }
+
+      if (type === "CROP_RESIZE") {
+        const { corner, initialCrop } = dragState;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const scaleX = originalSize.width / displaySize.width;
+        const scaleY = originalSize.height / displaySize.height;
+
+        const currentX = (event.clientX - rect.left) * scaleX;
+        const currentY = (event.clientY - rect.top) * scaleY;
+
+        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+        let x1 = initialCrop.x;
+        let y1 = initialCrop.y;
+        let x2 = initialCrop.x + initialCrop.width;
+        let y2 = initialCrop.y + initialCrop.height;
+
+        if (corner.includes("r")) x2 = currentX;
+        if (corner.includes("l")) x1 = currentX;
+        if (corner.includes("b")) y2 = currentY;
+        if (corner.includes("t")) y1 = currentY;
+
+        x1 = clamp(x1, 0, originalSize.width);
+        x2 = clamp(x2, 0, originalSize.width);
+        y1 = clamp(y1, 0, originalSize.height);
+        y2 = clamp(y2, 0, originalSize.height);
+
+        if (Math.abs(x2 - x1) < 10) {
+          if (corner.includes("l")) x1 = x2 - 10;
+          else x2 = x1 + 10;
+        }
+
+        if (Math.abs(y2 - y1) < 10) {
+          if (corner.includes("t")) y1 = y2 - 10;
+          else y2 = y1 + 10;
+        }
+
+        setCrop({
+          x: Math.min(x1, x2),
+          y: Math.min(y1, y2),
+          width: Math.abs(x2 - x1),
+          height: Math.abs(y2 - y1)
         });
       }
     };
@@ -256,8 +332,16 @@ function App() {
 
     setIsDownloading(true);
     try {
+      const processedImage = await processImage({
+        imageSrc,
+        rotation,
+        brightness,
+        contrast,
+        crop
+      });
+
       const result = await exportImage({
-        image: imageSrc,
+        image: processedImage,
         jawType: detectedJawType,
         detections
       });
@@ -269,6 +353,19 @@ function App() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const startCropResize = (event, corner) => {
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    setDragState({
+      type: "CROP_RESIZE",
+      corner,
+      startX: event.clientX,
+      startY: event.clientY,
+      initialCrop: structuredClone(crop)
+    });
   };
 
   return (
@@ -289,217 +386,243 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 select-none">
           <div className="lg:col-span-12">
-            <ControlPanel title="1. Загрузка изображения">
-              <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center w-full">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div className="flex w-full md:w-auto md:flex-grow">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="bg-gradient-to-r from-[#F39416] to-[#F33716] hover:opacity-90 text-white rounded-l-lg rounded-r-none px-4 py-2 transition whitespace-nowrap font-medium"
-                  >
-                    Выбрать файл
-                  </button>
-                  <div className="flex-grow bg-gray-100 rounded-r-lg rounded-l-none border border-gray-200 border-l-0 text-gray-600 px-3 py-2 flex items-center truncate">
-                    {fileName || "Файл не выбран"}
-                  </div>
-                </div>
-              </div>
-            </ControlPanel>
+            <div className="lg:col-span-12">
+              <FileUploadPanel
+                fileName={fileName}
+                handleFileChange={handleFileChange}
+                fileInputRef={fileInputRef}
+              />
+            </div>
           </div>
 
           <div className="lg:col-span-4">
-            <ControlPanel title="2. Распознавание">
-              <select
-                value={jawType}
-                onChange={(event) => setJawType(event.target.value)}
-                className="bg-gray-50 border border-gray-200 text-gray-700 rounded-lg px-3 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#F39416]/50 flex-grow"
-              >
-                <option value="auto">Автоматически</option>
-                <option value="upper">Верхняя челюсть</option>
-                <option value="lower">Нижняя челюсть</option>
-              </select>
-              <button
-                onClick={runDetection}
-                disabled={!imageSrc || isLoading}
-                className="bg-gradient-to-r from-[#F39416] to-[#F33716] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition px-4 py-2 rounded-lg text-white font-medium flex-grow md:flex-grow-0 whitespace-nowrap flex items-center justify-center min-w-[110px]"
-              >
-                <span className="flex items-center justify-center h-[1.5rem]">
-                  {isLoading ? <Spinner /> : "Запустить ИИ"}
-                </span>
-              </button>
-            </ControlPanel>
+            <div className="lg:col-span-4">
+              <DetectionPanel
+                jawType={jawType}
+                setJawType={setJawType}
+                runDetection={runDetection}
+                imageSrc={imageSrc}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
 
           <div className="lg:col-span-5">
-            <ControlPanel title="3. Редактирование">
-              <button
-                onClick={addNewDetection}
-                disabled={!imageSrc}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 disabled:opacity-50 transition px-4 py-2 rounded-lg flex-1 flex items-center justify-center gap-2 font-medium"
-              >
-                Добавить
-              </button>
-              <div className="relative flex-1">
-                <button
-                  disabled={selectedIndex === null}
-                  onClick={() => {
-                    if (selectedIndex === null) return;
-                    setIsLabelMenuOpen((value) => !value);
-                  }}
-                  className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition px-4 py-2 rounded-lg w-full font-medium flex items-center justify-center gap-2"
-                >
-                  Метка
-                </button>
-                {selectedIndex !== null && isLabelMenuOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-[100] flex flex-col p-2">
-                    {LABEL_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => {
-                          updateDetection(selectedIndex, { label: option });
-                          setIsLabelMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg text-sm transition-colors text-left"
-                      >
-                        <span>{option.icon}</span>
-                        <span>{option.text}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={deleteSelectedDetection}
-                disabled={selectedIndex === null}
-                className="bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition px-4 py-2 rounded-lg flex-1 font-medium"
-              >
-                Удалить
-              </button>
-            </ControlPanel>
+            <div className="lg:col-span-5">
+              <EditPanel
+                imageSrc={imageSrc}
+                addNewDetection={addNewDetection}
+                selectedIndex={selectedIndex}
+                deleteSelectedDetection={deleteSelectedDetection}
+                isLabelMenuOpen={isLabelMenuOpen}
+                setIsLabelMenuOpen={setIsLabelMenuOpen}
+                updateDetection={updateDetection}
+              />
+            </div>
           </div>
 
           <div className="lg:col-span-3">
-            <ControlPanel title="4. Сохранение">
-              <button
-                onClick={saveImage}
-                disabled={!imageSrc || !detectedJawType || isDownloading}
-                className="bg-gradient-to-r from-[#F39416] to-[#F33716] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white transition px-4 py-2 rounded-lg w-full font-medium flex items-center justify-center"
-              >
-                <span className="flex items-center justify-center h-[1.5rem]">
-                  {isDownloading ? <Spinner /> : "Экспортировать PNG"}
-                </span>
-              </button>
-            </ControlPanel>
+            <div className="lg:col-span-3">
+              <ExportPanel
+                imageSrc={imageSrc}
+                detectedJawType={detectedJawType}
+                isDownloading={isDownloading}
+                saveImage={saveImage}
+              />
+            </div>
           </div>
         </div>
 
         {imageSrc && (
-          <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-xl overflow-hidden select-none">
-            <div
-              ref={containerRef}
-              className="relative w-full rounded-xl overflow-hidden bg-gray-100 grid place-items-center"
-            >
-              <AnimatePresence>
-                {showEditHint && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: detectedJawType === "lower" ? -8 : 8 }}
-                    animate={{ opacity: 0.75, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: detectedJawType === "lower" ? -8 : 8 }}
-                    transition={{ duration: 0.2 }}
-                    className={`absolute z-50 pointer-events-none
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <div className="lg:col-span-3 order-2 lg:order-1">
+              <ImageAdjustPanel
+                rotation={rotation}
+                setRotation={setRotation}
+                brightness={brightness}
+                setBrightness={setBrightness}
+                contrast={contrast}
+                setContrast={setContrast}
+              />
+            </div>
+
+            <div className="lg:col-span-9 order-1 lg:order-2">
+              <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-xl overflow-visible select-none">
+                <div
+                  ref={containerRef}
+                  className="relative w-full rounded-xl overflow-visible bg-gray-100 grid place-items-center"
+                  onPointerDown={() => {
+                    setSelectedIndex(null);
+                  }}
+                >
+                  <AnimatePresence>
+                    {showEditHint && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: detectedJawType === "lower" ? -8 : 8 }}
+                        animate={{ opacity: 0.75, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: detectedJawType === "lower" ? -8 : 8 }}
+                        transition={{ duration: 0.2 }}
+                        className={`absolute z-50 pointer-events-none
                       ${detectedJawType === "lower" ? "top-[20px]" : "bottom-[20px]"}
                     `}
-                  >
-                    <div className="bg-gray-900/70 backdrop-blur-md text-white text-sm px-4 py-2 rounded-full shadow-lg border border-white/10">
-                      Введите номер зуба с клавиатуры
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <img
-                ref={imageRef}
-                src={imageSrc}
-                className="w-full pointer-events-none block"
-                alt="Снимок зубов"
-              />
+                      >
+                        <div className="bg-gray-900/70 backdrop-blur-md text-white text-sm px-4 py-2 rounded-full shadow-lg border border-white/10">
+                          Введите номер зуба с клавиатуры
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-              {detections.map((detection, index) => {
-                const scaleX = displaySize.width / originalSize.width;
-                const scaleY = displaySize.height / originalSize.height;
-                if (!scaleX || !scaleY || !Number.isFinite(scaleX)) return null;
+                  <div className="w-full overflow-hidden rounded-xl">
+                    <img
+                      ref={imageRef}
+                      src={imageSrc}
+                      className="w-full h-auto block pointer-events-none"
+                      alt="Снимок зубов"
+                      style={{
+                        transform: `rotate(${rotation}deg)`,
+                        transformOrigin: "center",
+                        filter: `brightness(${brightness}%) contrast(${contrast}%)`
+                      }}
+                    />
+                  </div>
 
-                const x = detection.x_min * scaleX;
-                const y = detection.y_min * scaleY;
-                const w = (detection.x_max - detection.x_min) * scaleX;
-                const h = (detection.y_max - detection.y_min) * scaleY;
-                const isSelected = selectedIndex === index;
+                  {crop && (() => {
+                    const scaleX = displaySize.width / originalSize.width;
+                    const scaleY = displaySize.height / originalSize.height;
 
-                const centerX = x + w / 2;
-                const centerY = y + h / 2;
-                const labelX = detection.label_x * scaleX;
-                const labelY = detection.label_y * scaleY;
+                    const left = crop.x * scaleX;
+                    const top = crop.y * scaleY;
+                    const right = (crop.x + crop.width) * scaleX;
+                    const bottom = (crop.y + crop.height) * scaleY;
 
-                return (
-                  <div key={index} className="contents">
-                    <motion.div
-                      onPointerDown={(event) => initiateDrag(event, index, "MOVE")}
-                      className={`absolute border-2 font-bold flex items-center justify-center rounded-lg cursor-move touch-none transition-colors
-                        ${isSelected
-                          ? "border-[#22D3EE] text-[#0891B2] bg-[#22D3EE]/35 z-20 shadow-[0_0_20px_rgba(34,211,238,0.6)]"
-                          : "border-[#67E8F9] text-[#0891B2] bg-[#67E8F9]/25 z-10 hover:border-[#22D3EE] hover:bg-[#22D3EE]/25"
-                        }`}
-                      style={{ left: x, top: y, width: w, height: h, transform: "none" }}
-                    >
-                      <span className="pointer-events-none select-none drop-shadow-md text-sm md:text-base bg-white/60 px-1 rounded backdrop-blur-sm">
-                        {detection.tooth_number}
-                      </span>
-                      {isSelected && (
-                        <div
-                          className="absolute bottom-[-6px] right-[-6px] w-5 h-5 bg-white border-2 border-[#22D3EE] rounded-full cursor-nwse-resize z-30 shadow-[0_0_8px_rgba(34,211,238,0.6)]"
-                          onPointerDown={(event) => initiateDrag(event, index, "RESIZE")}
-                        />
-                      )}
-                    </motion.div>
+                    const corners = {
+                      tl: { left, top },
+                      tr: { left: right, top },
+                      bl: { left, top: bottom },
+                      br: { left: right, top: bottom }
+                    };
 
-                    {detection.label && (
+                    return (
                       <>
-                        <svg className="absolute inset-0 pointer-events-none w-full h-full z-[5]">
-                          <line
-                            x1={centerX}
-                            y1={centerY}
-                            x2={labelX}
-                            y2={labelY}
-                            stroke={isSelected ? "#22D3EE" : "#67E8F9"}
-                            strokeWidth="2"
-                            strokeDasharray="4"
+                        <div
+                          className="absolute inset-0 z-[80] pointer-events-none"
+                          style={{
+                            backdropFilter: "blur(6px)",
+                            WebkitBackdropFilter: "blur(6px)",
+                            clipPath: `
+                          polygon(
+                            0% 0%,
+                            100% 0%,
+                            100% 100%,
+                            0% 100%,
+                            0% 0%,
+                            ${left}px ${top}px,
+                            ${left}px ${bottom}px,
+                            ${right}px ${bottom}px,
+                            ${right}px ${top}px,
+                            ${left}px ${top}px
+                          )
+                        `
+                          }}
+                        />
+
+                        <div
+                          className="absolute border-2 border-orange-500 z-[90] pointer-events-none"
+                          style={{
+                            left,
+                            top,
+                            width: right - left,
+                            height: bottom - top
+                          }}
+                        />
+
+                        {Object.entries(corners).map(([key, pos]) => (
+                          <div
+                            key={key}
+                            onPointerDown={(e) => startCropResize(e, key)}
+                            className="absolute w-5 h-5 bg-white border-2 border-orange-500 rounded-full shadow-md hover:scale-110 active:scale-95 transition cursor-pointer z-[100] -translate-x-1/2 -translate-y-1/2"
+                            style={pos}
                           />
-                        </svg>
+                        ))}
+                      </>
+                    );
+                  })()}
+
+                  {detections.map((detection, index) => {
+                    const scaleX = displaySize.width / originalSize.width;
+                    const scaleY = displaySize.height / originalSize.height;
+                    if (!scaleX || !scaleY || !Number.isFinite(scaleX)) return null;
+
+                    const x = detection.x_min * scaleX;
+                    const y = detection.y_min * scaleY;
+                    const w = (detection.x_max - detection.x_min) * scaleX;
+                    const h = (detection.y_max - detection.y_min) * scaleY;
+                    const isSelected = selectedIndex === index;
+
+                    const centerX = x + w / 2;
+                    const centerY = y + h / 2;
+                    const labelX = detection.label_x * scaleX;
+                    const labelY = detection.label_y * scaleY;
+
+                    return (
+                      <div key={index} className="contents">
                         <motion.div
-                          onPointerDown={(event) => initiateDrag(event, index, "LABEL_MOVE")}
-                          className="absolute px-3 py-2 rounded-2xl border touch-none border-white/80 bg-gray-400/40 backdrop-blur-md text-white flex items-center justify-center gap-2 cursor-grab active:cursor-grabbing z-30 shadow-sm leading-none"
-                          style={{ left: labelX, top: labelY, transform: "translate(-50%, -50%)" }}
+                          onPointerDown={(event) => initiateDrag(event, index, "MOVE")}
+                          className={`absolute border-2 font-bold flex items-center justify-center rounded-lg cursor-move touch-none transition-colors
+                        ${isSelected
+                              ? "border-[#22D3EE] text-[#0891B2] bg-[#22D3EE]/35 z-20 shadow-[0_0_20px_rgba(34,211,238,0.6)]"
+                              : "border-[#67E8F9] text-[#0891B2] bg-[#67E8F9]/25 z-10 hover:border-[#22D3EE] hover:bg-[#22D3EE]/25"
+                            }`}
+                          style={{ left: x, top: y, width: w, height: h, transform: "none" }}
                         >
-                          <span className="text-base leading-none opacity-90 flex items-center">
-                            {detection.label.icon}
+                          <span className="pointer-events-none select-none drop-shadow-md text-sm md:text-base bg-white/60 px-1 rounded backdrop-blur-sm">
+                            {detection.tooth_number}
                           </span>
-                          <span
-                            className="text-base font-normal whitespace-nowrap tracking-normal flex items-center"
-                            style={{ fontFamily: "Inter, system-ui, sans-serif" }}
-                          >
-                            {detection.label.text}
-                          </span>
+                          {isSelected && (
+                            <div
+                              className="absolute bottom-[-6px] right-[-6px] w-5 h-5 bg-white border-2 border-[#22D3EE] rounded-full cursor-nwse-resize z-30 shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+                              onPointerDown={(event) => initiateDrag(event, index, "RESIZE")}
+                            />
+                          )}
                         </motion.div>
 
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                        {detection.label && (
+                          <>
+                            <svg className="absolute inset-0 pointer-events-none w-full h-full z-[5]">
+                              <line
+                                x1={centerX}
+                                y1={centerY}
+                                x2={labelX}
+                                y2={labelY}
+                                stroke={isSelected ? "#22D3EE" : "#67E8F9"}
+                                strokeWidth="2"
+                                strokeDasharray="4"
+                              />
+                            </svg>
+                            <motion.div
+                              onPointerDown={(event) => initiateDrag(event, index, "LABEL_MOVE")}
+                              className="absolute px-3 py-2 rounded-2xl border touch-none border-white/80 bg-gray-400/40 backdrop-blur-md text-white flex items-center justify-center gap-2 cursor-grab active:cursor-grabbing z-30 shadow-sm leading-none"
+                              style={{ left: labelX, top: labelY, transform: "translate(-50%, -50%)" }}
+                            >
+                              <span className="text-base leading-none opacity-90 flex items-center">
+                                {detection.label.icon}
+                              </span>
+                              <span
+                                className="text-base font-normal whitespace-nowrap tracking-normal flex items-center"
+                                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                              >
+                                {detection.label.text}
+                              </span>
+                            </motion.div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
