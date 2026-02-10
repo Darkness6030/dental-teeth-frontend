@@ -14,15 +14,13 @@ const emptyFormData = {
   is_admin: false,
 };
 
-function AdminPage() {
+function AdminPage({ currentUser }) {
   const [users, setUsers] = useState([]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [formData, setFormData] = useState(emptyFormData);
 
   useEffect(() => {
@@ -58,9 +56,15 @@ function AdminPage() {
   };
 
   const handleToggleAdmin = async (user) => {
-    setUsers(users.map((other) =>
-      other.id === user.id ? { ...other, is_admin: !other.is_admin } : other
-    ));
+    if (currentUser?.id === user.id) return;
+
+    setUsers(
+      users.map((other) =>
+        other.id === user.id
+          ? { ...other, is_admin: !other.is_admin }
+          : other
+      )
+    );
 
     await updateUser(user.id, {
       name: user.name,
@@ -73,15 +77,20 @@ function AdminPage() {
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.username.trim()) return;
 
+    if (editingUserId === null && !formData.password.trim()) return;
+
     try {
       setIsSaving(true);
+
       if (editingUserId === null) {
         const newUser = await createUser(formData);
         setUsers([newUser, ...users]);
       } else {
         const updatedUser = await updateUser(editingUserId, formData);
         setUsers(
-          users.map((other) => (other.id === updatedUser.id ? updatedUser : other))
+          users.map((other) =>
+            other.id === updatedUser.id ? updatedUser : other
+          )
         );
       }
 
@@ -93,6 +102,7 @@ function AdminPage() {
 
   const handleDelete = async () => {
     if (editingUserId === null) return;
+    if (editingUserId === currentUser?.id) return;
 
     try {
       setIsDeleting(true);
@@ -105,7 +115,7 @@ function AdminPage() {
   };
 
   return (
-    <div className="flex-1 bg-[#F5F5F5] px-[6%] py-7">
+    <div className="flex-1 px-[6%] py-7">
       <div className="mb-6 flex items-center justify-between">
         <div className="text-3xl font-semibold">Пользователи</div>
 
@@ -128,39 +138,52 @@ function AdminPage() {
           </thead>
 
           <tbody>
-            {users.map((user) => (
-              <tr
-                key={user.id}
-                className="cursor-pointer border-b border-gray-200 text-sm text-gray-800 hover:bg-gray-50"
-              >
-                <td
-                  className="py-3 pr-4"
-                  onClick={() => openEditModal(user)}
-                >
-                  {user.name}
-                </td>
+            {users.map((user) => {
+              const isCurrentUser = currentUser?.id === user.id;
 
-                <td
-                  className="py-3 pr-4"
-                  onClick={() => openEditModal(user)}
+              return (
+                <tr
+                  key={user.id}
+                  className="cursor-pointer border-b border-gray-200 text-sm text-gray-800 hover:bg-gray-50"
                 >
-                  {user.username}
-                </td>
+                  <td
+                    className="py-3 pr-4"
+                    onClick={() => openEditModal(user)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {user.name}
+                      {isCurrentUser && (
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                          Вы
+                        </span>
+                      )}
+                    </div>
+                  </td>
 
-                <td className="py-3 pr-4">
-                  {user.is_owner ? (
-                    <span className="bg-gray-800 text-white px-2 py-1 rounded-full">
-                      Владелец
-                    </span>
-                  ) : (
-                    <Switch
-                      checked={user.is_admin}
-                      handleChange={() => handleToggleAdmin(user)}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))}
+                  <td
+                    className="py-3 pr-4"
+                    onClick={() => openEditModal(user)}
+                  >
+                    {user.username}
+                  </td>
+
+                  <td className="py-3 pr-4">
+                    <div
+                      className={
+                        isCurrentUser
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }
+                    >
+                      <Switch
+                        checked={user.is_admin}
+                        handleChange={() => handleToggleAdmin(user)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
 
             {users.length === 0 && (
               <tr>
@@ -227,7 +250,9 @@ function AdminPage() {
 
               <div>
                 <div className="text-xs font-semibold text-gray-700">
-                  Новый пароль (необязательно)
+                  {editingUserId === null
+                    ? "Пароль"
+                    : "Новый пароль (необязательно)"}
                 </div>
                 <input
                   type="password"
@@ -241,24 +266,25 @@ function AdminPage() {
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              {editingUserId !== null ? (
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting || isSaving}
-                  className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
-                >
-                  {isDeleting ? "Удаление..." : "Удалить"}
-                </button>
-              ) : (
-                <div />
-              )}
+              {editingUserId !== null &&
+                editingUserId !== currentUser?.id && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting || isSaving}
+                    className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+                  >
+                    {isDeleting ? "Удаление..." : "Удалить"}
+                  </button>
+                )}
 
               <button
                 onClick={handleSave}
                 disabled={
                   isSaving ||
                   !formData.name.trim() ||
-                  !formData.username.trim()
+                  !formData.username.trim() ||
+                  (editingUserId === null &&
+                    !formData.password.trim())
                 }
                 className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-60"
               >

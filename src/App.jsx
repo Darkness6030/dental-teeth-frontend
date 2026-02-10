@@ -41,29 +41,29 @@ function App() {
     navigate("/login");
   };
 
-  if (isUserLoading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center">
-        <Loader />
-      </div>
-    );
-  }
-
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<MainPage currentUser={currentUser} handleLogout={handleLogout} />}
-      />
-      <Route
-        path="/admin"
-        element={<AdminPage currentUser={currentUser} handleLogout={handleLogout} />}
-      />
-      <Route
-        path="/login"
-        element={<LoginPage setCurrentUser={setCurrentUser} />}
-      />
-    </Routes>
+    <div className="min-h-screen bg-gray-50">
+      {isUserLoading ? (
+        <div className="w-full min-h-screen flex items-center justify-center">
+          <Loader />
+        </div>
+      ) : (
+        <Routes>
+          <Route
+            path="/"
+            element={<MainPage currentUser={currentUser} />}
+          />
+          <Route
+            path="/admin"
+            element={<AdminPage currentUser={currentUser} />}
+          />
+          <Route
+            path="/login"
+            element={<LoginPage setCurrentUser={setCurrentUser} />}
+          />
+        </Routes>
+      )}
+    </div>
   );
 }
 

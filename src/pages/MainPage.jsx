@@ -383,7 +383,7 @@ function MainPage() {
 
   return (
     <div
-      className="min-h-screen bg-gray-50 p-4 md:p-8"
+      className="p-4 md:p-8"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) {
           setSelectedIndex(null);
