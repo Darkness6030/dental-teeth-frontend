@@ -575,7 +575,7 @@ function MainPage() {
                           {Object.entries(corners).map(([key, pos]) => (
                             <div
                               key={key}
-                              onPointerDown={(e) => startCropResize(e, key)}
+                              onPointerDown={(event) => startCropResize(event, key)}
                               className="absolute w-5 h-5 bg-white border-2 border-orange-500 rounded-full shadow-md hover:scale-110 active:scale-95 transition cursor-pointer z-[100] -translate-x-1/2 -translate-y-1/2"
                               style={pos}
                             />

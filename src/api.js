@@ -1,32 +1,86 @@
-const API_BASE_URL = "https://teeth.ddaily.ru/api";
+import axios from "axios";
 
-export async function detectTeeth({ image, jawType }) {
-  const response = await fetch(`${API_BASE_URL}/detect`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      image,
-      jaw_type: jawType,
-    }),
+const client = axios.create({
+  baseURL: "https://teeth.ddaily.ru/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export const saveAccessToken = (access_token) => {
+  localStorage.setItem("access_token", access_token);
+};
+
+export const removeAccessToken = () => {
+  localStorage.removeItem("access_token");
+};
+
+export const getAccessToken = () => {
+  return localStorage.getItem("access_token");
+};
+
+client.interceptors.request.use(
+  (config) => {
+    const accessToken = getAccessToken();
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+export const login = async (username, password) => {
+  const { data } = await client.post("/login", {
+    username,
+    password,
   });
 
-  return response.json();
-}
+  saveAccessToken(data.access_token);
+  return data.user;
+};
 
-export async function exportImage({ image, jawType, detections }) {
-  const response = await fetch(`${API_BASE_URL}/export`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      image,
-      jaw_type: jawType,
-      detections,
-    }),
+export const logout = () => {
+  removeAccessToken();
+};
+
+export const getUser = async () => {
+  const { data } = await client.get("/user");
+  return data;
+};
+
+export const getUsers = async () => {
+  const { data } = await client.get("/users");
+  return data;
+};
+
+export const createUser = async (userData) => {
+  const { data } = await client.post("/users", userData);
+  return data;
+};
+
+export const updateUser = async (userId, userData) => {
+  const { data } = await client.post(`/users/${userId}`, userData);
+  return data;
+};
+
+export const deleteUser = async (userId) => {
+  await client.delete(`/users/${userId}`);
+};
+
+export const detectTeeth = async (image, jawType) => {
+  const { data } = await client.post("/detect", {
+    image,
+    jaw_type: jawType,
   });
+  return data;
+};
 
-  return response.json();
-}
+export const exportImage = async (image, jawType, detections) => {
+  const { data } = await client.post("/export", {
+    image,
+    jaw_type: jawType,
+    detections,
+  });
+  return data;
+};

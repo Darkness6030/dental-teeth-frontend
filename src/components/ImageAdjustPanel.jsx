@@ -1,29 +1,5 @@
 import ControlPanel from "./ControlPanel.jsx";
-
-const Switch = ({ checked, handleChange, disabled = false }) => {
-  return (
-    <button
-      type="button"
-      onClick={handleChange}
-      disabled={disabled}
-      className={`
-        relative inline-flex h-6 w-11 rounded-full
-        transition-colors duration-300 ease-in-out
-        ${checked ? "bg-green-500" : "bg-gray-300"}
-        ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
-      `}
-    >
-      <span
-        className={`
-          absolute top-1/2 left-0 h-5 w-5 rounded-full bg-white
-          -translate-y-1/2 transform
-          transition-transform duration-300 ease-in-out
-          ${checked ? "translate-x-[22px]" : "translate-x-[2px]"}
-        `}
-      />
-    </button>
-  );
-};
+import Switch from "./Switch.jsx";
 
 const ImageAdjustPanel = ({
   rotation,
@@ -52,7 +28,7 @@ const ImageAdjustPanel = ({
             min="-180"
             max="180"
             value={rotation}
-            onChange={(e) => setRotation(Number(e.target.value))}
+            onChange={(event) => setRotation(Number(event.target.value))}
             className="w-full"
           />
         </div>
@@ -69,7 +45,7 @@ const ImageAdjustPanel = ({
             min="0"
             max="200"
             value={brightness}
-            onChange={(e) => setBrightness(Number(e.target.value))}
+            onChange={(event) => setBrightness(Number(event.target.value))}
             className="w-full"
           />
         </div>
@@ -86,7 +62,7 @@ const ImageAdjustPanel = ({
             min="0"
             max="200"
             value={contrast}
-            onChange={(e) => setContrast(Number(e.target.value))}
+            onChange={(event) => setContrast(Number(event.target.value))}
             className="w-full"
           />
         </div>
