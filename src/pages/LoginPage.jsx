@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Spinner from "../components/Spinner";
 import { login } from "../api";
+import Spinner from "../components/Spinner";
 
 function LoginPage({ setCurrentUser }) {
   const [username, setUsername] = useState("");
@@ -28,7 +28,7 @@ function LoginPage({ setCurrentUser }) {
   };
 
   return (
-    <div className="flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-gray-100 p-6 sm:p-8">
           <div className="text-center mb-6">

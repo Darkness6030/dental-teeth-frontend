@@ -1,5 +1,6 @@
+import Slider from "../Slider.jsx";
+import Switch from "../Switch.jsx";
 import ControlPanel from "./ControlPanel.jsx";
-import Switch from "./Switch.jsx";
 
 const ImageAdjustPanel = ({
   rotation,
@@ -16,54 +17,48 @@ const ImageAdjustPanel = ({
   return (
     <ControlPanel title="5. Коррекция изображения">
       <div className="flex flex-col gap-6 w-full">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Поворот</span>
             <span className="text-sm text-gray-600 tabular-nums">
               {rotation}°
             </span>
           </div>
-          <input
-            type="range"
-            min="-180"
-            max="180"
+          <Slider
+            min={-180}
+            max={180}
             value={rotation}
-            onChange={(event) => setRotation(Number(event.target.value))}
-            className="w-full"
+            onChange={setRotation}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Яркость</span>
             <span className="text-sm text-gray-600 tabular-nums">
               {brightness}%
             </span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="200"
+          <Slider
+            min={0}
+            max={200}
             value={brightness}
-            onChange={(event) => setBrightness(Number(event.target.value))}
-            className="w-full"
+            onChange={setBrightness}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Контраст</span>
             <span className="text-sm text-gray-600 tabular-nums">
               {contrast}%
             </span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="200"
+          <Slider
+            min={0}
+            max={200}
             value={contrast}
-            onChange={(event) => setContrast(Number(event.target.value))}
-            className="w-full"
+            onChange={setContrast}
           />
         </div>
 

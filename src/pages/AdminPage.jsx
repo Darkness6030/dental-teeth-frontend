@@ -115,7 +115,7 @@ function AdminPage({ currentUser }) {
   };
 
   return (
-    <div className="flex-1 px-[6%] py-7">
+    <div className="px-[6%] py-7">
       <div className="mb-6 flex items-center justify-between">
         <div className="text-3xl font-semibold">Пользователи</div>
 

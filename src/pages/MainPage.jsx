@@ -1,13 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { detectTeeth, exportImage } from "../api";
-import Logo from "../assets/logo.svg";
 import DetectionBox from "../components/DetectionBox.jsx";
-import DetectionPanel from "../components/DetectionPanel.jsx";
-import EditPanel from "../components/EditPanel.jsx";
-import ExportPanel from "../components/ExportPanel.jsx";
-import FileUploadPanel from "../components/FileUploadPanel.jsx";
-import ImageAdjustPanel from "../components/ImageAdjustPanel.jsx";
+import DetectionPanel from "../components/panels/DetectionPanel.jsx";
+import EditPanel from "../components/panels/EditPanel.jsx";
+import ExportPanel from "../components/panels/ExportPanel.jsx";
+import FileUploadPanel from "../components/panels/FileUploadPanel.jsx";
+import ImageAdjustPanel from "../components/panels/ImageAdjustPanel.jsx";
 import { useProcessImage } from "../hooks/useProcessImage.js";
 
 function MainPage() {
@@ -395,10 +394,6 @@ function MainPage() {
         className="max-w-7xl mx-auto space-y-6"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center gap-3 mb-6">
-          <img src={Logo} alt="Dental Daily Logo" className="h-12 w-auto" />
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 select-none">
           <div className="lg:col-span-12">
             <div className="lg:col-span-12">

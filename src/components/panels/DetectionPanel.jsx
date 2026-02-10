@@ -1,5 +1,5 @@
 import ControlPanel from "./ControlPanel.jsx";
-import Spinner from "./Spinner.jsx";
+import Spinner from "../Spinner.jsx";
 
 const DetectionPanel = ({
   jawType,
@@ -25,7 +25,7 @@ const DetectionPanel = ({
         className="bg-gradient-to-r from-[#F39416] to-[#F33716] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition px-4 py-2 rounded-lg text-white font-medium flex-grow md:flex-grow-0 whitespace-nowrap flex items-center justify-center min-w-[110px]"
       >
         <span className="flex items-center justify-center h-[1.5rem]">
-          {isLoading ? <Spinner /> : "Запустить ИИ"}
+          {isLoading ? <Spinner /> : "Запустить"}
         </span>
       </button>
     </ControlPanel>
