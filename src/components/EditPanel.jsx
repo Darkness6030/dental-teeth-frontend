@@ -34,7 +34,7 @@ const EditPanel = ({
           disabled={selectedIndex === null}
           onClick={() => {
             if (selectedIndex === null) return;
-            setIsLabelMenuOpen((v) => !v);
+            setIsLabelMenuOpen((value) => !value);
           }}
           className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition px-4 py-2 rounded-lg w-full font-medium flex items-center justify-center gap-2"
         >

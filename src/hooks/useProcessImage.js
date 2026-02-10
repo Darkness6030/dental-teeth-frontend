@@ -2,7 +2,15 @@ import { useCallback } from "react";
 
 export function useProcessImage() {
   const processImage = useCallback(
-    async ({ imageSrc, rotation = 0, brightness = 100, contrast = 100, crop }) => {
+    async ({
+      imageSrc,
+      crop,
+      rotation = 0,
+      brightness = 100,
+      contrast = 100,
+      flipHorizontal = false,
+      flipVertical = false,
+    }) => {
       const image = await new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -20,6 +28,7 @@ export function useProcessImage() {
 
       canvas.width = cropWidth;
       canvas.height = cropHeight;
+
       context.filter = `
         brightness(${brightness}%)
         contrast(${contrast}%)
@@ -27,6 +36,11 @@ export function useProcessImage() {
 
       context.translate(canvas.width / 2, canvas.height / 2);
       context.rotate(radians);
+      context.scale(
+        flipHorizontal ? -1 : 1,
+        flipVertical ? -1 : 1
+      );
+
       context.drawImage(
         image,
         cropX,
