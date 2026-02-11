@@ -76,10 +76,9 @@ export const detectTeeth = async (image, jawType) => {
   return data;
 };
 
-export const exportImage = async (image, jawType, detections) => {
+export const exportImage = async (image, detections) => {
   const { data } = await client.post("/export", {
     image,
-    jaw_type: jawType,
     detections,
   });
   return data;

@@ -102,10 +102,10 @@ function MainPage() {
         flipVertical,
       });
 
-      const result = await detectTeeth({
-        image: processedImage,
+      const result = await detectTeeth(
+        processedImage,
         jawType,
-      });
+      );
 
       const cropOffsetX = crop?.x ?? 0;
       const cropOffsetY = crop?.y ?? 0;
@@ -338,7 +338,7 @@ function MainPage() {
   };
 
   const saveImage = async () => {
-    if (!imageSrc || !detectedJawType) return;
+    if (!imageSrc) return;
 
     setIsDownloading(true);
     try {
@@ -352,11 +352,10 @@ function MainPage() {
         flipVertical,
       });
 
-      const result = await exportImage({
-        image: processedImage,
-        jawType: detectedJawType,
+      const result = await exportImage(
+        processedImage,
         detections,
-      });
+      );
 
       const link = document.createElement("a");
       link.download = "result.png";
@@ -435,7 +434,6 @@ function MainPage() {
             <div className="lg:col-span-3">
               <ExportPanel
                 imageSrc={imageSrc}
-                detectedJawType={detectedJawType}
                 isDownloading={isDownloading}
                 saveImage={saveImage}
               />
