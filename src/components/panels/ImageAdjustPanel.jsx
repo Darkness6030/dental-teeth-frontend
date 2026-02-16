@@ -9,6 +9,8 @@ const ImageAdjustPanel = ({
   setBrightness,
   contrast,
   setContrast,
+  quality,
+  setQuality,
   flipHorizontal,
   setFlipHorizontal,
   flipVertical,
@@ -59,6 +61,21 @@ const ImageAdjustPanel = ({
             max={200}
             value={contrast}
             onChange={setContrast}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Качество</span>
+            <span className="text-sm text-gray-600 tabular-nums">
+              {quality}%
+            </span>
+          </div>
+          <Slider
+            min={0}
+            max={100}
+            value={quality}
+            onChange={setQuality}
           />
         </div>
 

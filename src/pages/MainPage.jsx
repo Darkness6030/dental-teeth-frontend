@@ -21,6 +21,7 @@ function MainPage() {
   const [rotation, setRotation] = useState(0);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
+  const [quality, setQuality] = useState(100);
   const [flipHorizontal, setFlipHorizontal] = useState(false);
   const [flipVertical, setFlipVertical] = useState(false);
 
@@ -348,13 +349,24 @@ function MainPage() {
         rotation,
         brightness,
         contrast,
+        quality,
         flipHorizontal,
         flipVertical,
       });
 
+      const adjustedDetections = detections.map(detection => ({
+        ...detection,
+        x_min: detection.x_min - crop.x,
+        x_max: detection.x_max - crop.x,
+        y_min: detection.y_min - crop.y,
+        y_max: detection.y_max - crop.y,
+        label_x: detection.label_x - crop.x,
+        label_y: detection.label_y - crop.y,
+      }));
+
       const result = await exportImage(
         processedImage,
-        detections,
+        adjustedDetections,
       );
 
       const link = document.createElement("a");
@@ -446,11 +458,13 @@ function MainPage() {
             <div className="lg:col-span-3 order-2 lg:order-1">
               <ImageAdjustPanel
                 rotation={rotation}
-                setRotation={setRotation}
+                setRotation={setRotation}Ò
                 brightness={brightness}
                 setBrightness={setBrightness}
                 contrast={contrast}
                 setContrast={setContrast}
+                quality={quality}
+                setQuality={setQuality}
                 flipHorizontal={flipHorizontal}
                 setFlipHorizontal={setFlipHorizontal}
                 flipVertical={flipVertical}

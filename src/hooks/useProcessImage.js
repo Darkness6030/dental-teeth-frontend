@@ -8,52 +8,66 @@ export function useProcessImage() {
       rotation = 0,
       brightness = 100,
       contrast = 100,
+      quality = 100,
       flipHorizontal = false,
       flipVertical = false,
     }) => {
-      const image = await new Promise((resolve) => {
+      const imageElement = await new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.src = imageSrc;
       });
 
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      const radians = (rotation * Math.PI) / 180;
+      const originalWidth = imageElement.naturalWidth;
+      const originalHeight = imageElement.naturalHeight;
 
-      const cropX = crop?.x ?? 0;
-      const cropY = crop?.y ?? 0;
-      const cropWidth = crop?.width ?? image.naturalWidth;
-      const cropHeight = crop?.height ?? image.naturalHeight;
+      const rotationRadians = (rotation * Math.PI) / 180;
+      const rotatedCanvas = document.createElement("canvas");
+      const rotatedContext = rotatedCanvas.getContext("2d");
 
-      canvas.width = cropWidth;
-      canvas.height = cropHeight;
-
-      context.filter = `
+      rotatedCanvas.width = originalWidth;
+      rotatedCanvas.height = originalHeight;
+      rotatedContext.filter = `
         brightness(${brightness}%)
         contrast(${contrast}%)
       `;
 
-      context.translate(canvas.width / 2, canvas.height / 2);
-      context.rotate(radians);
-      context.scale(
+      rotatedContext.translate(originalWidth / 2, originalHeight / 2);
+      rotatedContext.rotate(rotationRadians);
+      rotatedContext.scale(
         flipHorizontal ? -1 : 1,
         flipVertical ? -1 : 1
       );
 
-      context.drawImage(
-        image,
+      rotatedContext.drawImage(
+        imageElement,
+        -originalWidth / 2,
+        -originalHeight / 2
+      );
+
+      const cropX = crop?.x ?? 0;
+      const cropY = crop?.y ?? 0;
+      const cropWidth = crop?.width ?? originalWidth;
+      const cropHeight = crop?.height ?? originalHeight;
+
+      const croppedCanvas = document.createElement("canvas");
+      const croppedContext = croppedCanvas.getContext("2d");
+
+      croppedCanvas.width = cropWidth;
+      croppedCanvas.height = cropHeight;
+      croppedContext.drawImage(
+        rotatedCanvas,
         cropX,
         cropY,
         cropWidth,
         cropHeight,
-        -cropWidth / 2,
-        -cropHeight / 2,
+        0,
+        0,
         cropWidth,
         cropHeight
       );
 
-      return canvas.toDataURL("image/png");
+      return croppedCanvas.toDataURL("image/jpeg", quality / 100);
     },
     []
   );
