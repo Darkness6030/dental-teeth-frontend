@@ -9,6 +9,9 @@ import FileUploadPanel from "../components/panels/FileUploadPanel.jsx";
 import ImageAdjustPanel from "../components/panels/ImageAdjustPanel.jsx";
 import { useProcessImage } from "../hooks/useProcessImage.js";
 
+const MIN_BOX_WIDTH = 20;
+const MIN_BOX_HEIGHT = 20;
+
 function MainPage() {
   const imageRef = useRef(null);
   const containerRef = useRef(null);
@@ -111,14 +114,29 @@ function MainPage() {
       const cropOffsetX = crop?.x ?? 0;
       const cropOffsetY = crop?.y ?? 0;
 
+
       setDetections(
         result.detections.map((detection) => {
-          const x_min = detection.x_min + cropOffsetX;
-          const x_max = detection.x_max + cropOffsetX;
-          const y_min = detection.y_min + cropOffsetY;
-          const y_max = detection.y_max + cropOffsetY;
+          const x_min_raw = detection.x_min + cropOffsetX;
+          const x_max_raw = detection.x_max + cropOffsetX;
+          const y_min_raw = detection.y_min + cropOffsetY;
+          const y_max_raw = detection.y_max + cropOffsetY;
 
-          const label_x = (x_min + x_max) / 2;
+          const width = x_max_raw - x_min_raw;
+          const height = y_max_raw - y_min_raw;
+
+          const newWidth = Math.max(width / 2, MIN_BOX_WIDTH);
+          const newHeight = Math.max(height / 2, MIN_BOX_HEIGHT);
+
+          const centerX = (x_min_raw + x_max_raw) / 2;
+          const centerY = (y_min_raw + y_max_raw) / 2;
+
+          const x_min = centerX - newWidth / 2;
+          const x_max = centerX + newWidth / 2;
+          const y_min = centerY - newHeight / 2;
+          const y_max = centerY + newHeight / 2;
+
+          const label_x = centerX;
           const label_y = y_min * 0.75 + y_max * 0.25;
 
           return {
@@ -458,7 +476,7 @@ function MainPage() {
             <div className="lg:col-span-3 order-2 lg:order-1">
               <ImageAdjustPanel
                 rotation={rotation}
-                setRotation={setRotation}Ò
+                setRotation={setRotation} Ò
                 brightness={brightness}
                 setBrightness={setBrightness}
                 contrast={contrast}

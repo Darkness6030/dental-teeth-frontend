@@ -1,6 +1,7 @@
 import ControlPanel from "./ControlPanel.jsx";
 
 const LABEL_OPTIONS = [
+  { id: "none", text: "Ничего", icon: "🚫" },
   { id: "caries", text: "Кариес", icon: "🦷" },
   { id: "pulpitis", text: "Пульпит", icon: "🔴" },
   { id: "periodontitis", text: "Периодонтит", icon: "⚠️" },
@@ -47,7 +48,10 @@ const EditPanel = ({
               <button
                 key={option.id}
                 onClick={() => {
-                  updateDetection(selectedIndex, { label: option });
+                  updateDetection(
+                    selectedIndex,
+                    { label: option.id === "none" ? null : option }
+                  );
                   setIsLabelMenuOpen(false);
                 }}
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg text-sm transition-colors text-left"
