@@ -10,7 +10,6 @@ function LoginPage({ setCurrentUser }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-
   const handleLogin = async (event) => {
     event.preventDefault();
     setIsLoading(true);
@@ -21,7 +20,11 @@ function LoginPage({ setCurrentUser }) {
       setCurrentUser(user);
       navigate("/");
     } catch (error) {
-      setErrorText("Неверный логин или пароль");
+      if (error.response?.status === 401) {
+        setErrorText("Неверный логин или пароль");
+      } else {
+        setErrorText("Произошла ошибка. Попробуйте позже");
+      }
     } finally {
       setIsLoading(false);
     }

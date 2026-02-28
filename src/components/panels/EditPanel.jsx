@@ -4,6 +4,7 @@ const LABEL_OPTIONS = [
   { id: "none", text: "Ничего", icon: "🚫" },
   { id: "caries", text: "Кариес", icon: "🦷" },
   { id: "pulpitis", text: "Пульпит", icon: "🔴" },
+  { id: "caries_pulpitis", text: "Кариес/пульпит", icon: "🦷" },
   { id: "periodontitis", text: "Периодонтит", icon: "⚠️" },
   { id: "crack", text: "Трещина", icon: "⚡" },
   { id: "extraction", text: "Удаление", icon: "✖️" },

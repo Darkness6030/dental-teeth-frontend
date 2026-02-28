@@ -9,8 +9,8 @@ import FileUploadPanel from "../components/panels/FileUploadPanel.jsx";
 import ImageAdjustPanel from "../components/panels/ImageAdjustPanel.jsx";
 import { useProcessImage } from "../hooks/useProcessImage.js";
 
-const MIN_BOX_WIDTH = 20;
-const MIN_BOX_HEIGHT = 20;
+const MIN_BOX_WIDTH = 300;
+const MIN_BOX_HEIGHT = 300;
 
 function MainPage() {
   const imageRef = useRef(null);
@@ -162,7 +162,7 @@ function MainPage() {
   const addNewDetection = () => {
     if (!originalSize.width || !originalSize.height) return;
 
-    const boxSize = Math.min(originalSize.width, originalSize.height) * 0.2;
+    const boxSize = Math.min(originalSize.width, originalSize.height) * 0.1;
     const startX = (originalSize.width - boxSize) / 2;
     const startY = (originalSize.height - boxSize) / 2;
 
