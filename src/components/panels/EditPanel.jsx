@@ -3,13 +3,20 @@ import ControlPanel from "./ControlPanel.jsx";
 const LABEL_OPTIONS = [
   { id: "none", text: "Ничего", icon: "🚫" },
   { id: "caries", text: "Кариес", icon: "🦷" },
-  { id: "pulpitis", text: "Пульпит", icon: "🔴" },
+  { id: "icon", text: "Айкон (ICON)", icon: "💎" },
+  { id: "sealant", text: "Герметизация", icon: "🛡️" },
+  { id: "caries_canals", text: "Кариес/каналы", icon: "🦷" },
   { id: "caries_pulpitis", text: "Кариес/пульпит", icon: "🦷" },
+  { id: "pulpitis", text: "Пульпит", icon: "🔴" },
   { id: "periodontitis", text: "Периодонтит", icon: "⚠️" },
   { id: "crack", text: "Трещина", icon: "⚡" },
-  { id: "extraction", text: "Удаление", icon: "✖️" },
+  { id: "restoration", text: "Реставрация", icon: "🧩" },
+  { id: "crown", text: "Коронка", icon: "👑" },
+  { id: "temporary_crown", text: "Временная коронка", icon: "⏳" },
   { id: "implant", text: "Имплант", icon: "🔩" },
-  { id: "crown", text: "Коронка", icon: "👑" }
+  { id: "extraction", text: "Удаление", icon: "✖️" },
+  { id: "extraction_implant", text: "Удаление/имплантация", icon: "🔧" },
+  { id: "treatment_question", text: "Лечение под вопросом", icon: "❓" }
 ];
 
 const EditPanel = ({
