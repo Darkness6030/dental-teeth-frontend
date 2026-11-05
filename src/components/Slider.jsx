@@ -3,12 +3,14 @@ function Slider({
   min,
   max,
   step = 1,
-  onChange
+  onChange,
+  ...inputProps
 }) {
   const percentage = ((value - min) / (max - min)) * 100;
   return (
     <div className="relative w-full">
       <input
+        {...inputProps}
         type="range"
         min={min}
         max={max}

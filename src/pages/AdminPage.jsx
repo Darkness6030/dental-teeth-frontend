@@ -5,6 +5,7 @@ import {
   getUsers,
   updateUser,
 } from "../api";
+import LabelTypesAdmin from "../components/LabelTypesAdmin.jsx";
 import Switch from "../components/Switch";
 
 const emptyFormData = {
@@ -198,6 +199,8 @@ function AdminPage({ currentUser }) {
           </tbody>
         </table>
       </div>
+
+      {currentUser?.is_admin && <LabelTypesAdmin />}
 
       {isModalOpen && (
         <div

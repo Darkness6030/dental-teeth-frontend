@@ -8,7 +8,7 @@ function NavigationBar({ currentUser, onLogout }) {
 
   return (
     <div className="w-full bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 min-h-16 py-2 flex flex-wrap gap-2 items-center justify-between">
         <div className="flex items-center gap-3">
           <div
             className="hidden md:flex items-center gap-3 cursor-pointer"
@@ -29,10 +29,14 @@ function NavigationBar({ currentUser, onLogout }) {
         </div>
 
         {currentUser && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="hidden md:block text-sm font-medium text-gray-700">
               {currentUser.name}
             </div>
+            <button onClick={() => navigate(location.pathname === "/images" ? "/" : "/images")}
+              className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100">
+              {location.pathname === "/images" ? "Разметка зубов" : "Коллажи"}
+            </button>
 
             {currentUser.is_admin && (
               <button

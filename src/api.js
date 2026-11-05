@@ -83,3 +83,39 @@ export const exportImage = async (image, detections) => {
   });
   return data;
 };
+
+export const createCollage = async (before, after) => {
+  const { data } = await client.post("/images/collage", { before, after });
+  return data;
+};
+
+export const prepareCollage = async (before, after, autoAlign = true) => {
+  const { data } = await client.post("/images/prepare", { before, after, auto_align: autoAlign });
+  return data;
+};
+
+export const getLabelTypes = async () => {
+  const { data } = await client.get("/label-types");
+  return data;
+};
+
+export const createLabelType = async (labelData) => {
+  const { data } = await client.post("/label-types", labelData);
+  return data;
+};
+
+export const updateLabelType = async (labelId, labelData) => {
+  const { data } = await client.post(`/label-types/${labelId}`, labelData);
+  return data;
+};
+
+export const deleteLabelType = async (labelId) => {
+  await client.delete(`/label-types/${labelId}`);
+};
+
+export const listCollageCases = async (offset = 0, mode = 'website', source_case_id) => (await client.get('/images/cases', { params: { offset, limit: 24, mode, source_case_id } })).data;
+export const getCollageCase = async (id) => (await client.get(`/images/cases/${id}`)).data;
+export const saveCollageCase = async (id, payload) => (await (id
+  ? client.put(`/images/cases/${id}`, payload) : client.post('/images/cases', payload))).data;
+export const getCollageDraft = async (mode = 'website') => (await client.get('/images/draft', { params: { mode } })).data;
+export const saveCollageDraft = async (state) => (await client.put('/images/draft', state)).data;

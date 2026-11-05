@@ -1,23 +1,6 @@
+import { useEffect, useState } from "react";
+import { getLabelTypes } from "../../api";
 import ControlPanel from "./ControlPanel.jsx";
-
-const LABEL_OPTIONS = [
-  { id: "none", text: "Ничего", icon: "🚫" },
-  { id: "caries", text: "Кариес", icon: "🦷" },
-  { id: "icon", text: "Айкон (ICON)", icon: "💎" },
-  { id: "sealant", text: "Герметизация", icon: "🛡️" },
-  { id: "caries_canals", text: "Кариес/каналы", icon: "🦷" },
-  { id: "caries_pulpitis", text: "Кариес/пульпит", icon: "🦷" },
-  { id: "pulpitis", text: "Пульпит", icon: "🔴" },
-  { id: "periodontitis", text: "Периодонтит", icon: "⚠️" },
-  { id: "crack", text: "Трещина", icon: "⚡" },
-  { id: "restoration", text: "Реставрация", icon: "🧩" },
-  { id: "crown", text: "Коронка", icon: "👑" },
-  { id: "temporary_crown", text: "Временная коронка", icon: "⏳" },
-  { id: "implant", text: "Имплант", icon: "🔩" },
-  { id: "extraction", text: "Удаление", icon: "✖️" },
-  { id: "extraction_implant", text: "Удаление/имплантация", icon: "🔧" },
-  { id: "treatment_question", text: "Лечение под вопросом", icon: "❓" }
-];
 
 const EditPanel = ({
   imageSrc,
@@ -28,6 +11,25 @@ const EditPanel = ({
   setIsLabelMenuOpen,
   updateDetection
 }) => {
+  const [labelTypes, setLabelTypes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getLabelTypes().then((labels) => {
+      if (active) setLabelTypes(labels);
+    }).catch(() => {
+      if (active) setError("Не удалось загрузить метки");
+    }).finally(() => {
+      if (active) setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, [retry]);
+
+  const options = [{ id: "none", text: "Ничего", icon: "🚫" }, ...labelTypes];
+
   return (
     <ControlPanel title="3. Редактирование">
       <button
@@ -51,8 +53,19 @@ const EditPanel = ({
         </button>
 
         {selectedIndex !== null && isLabelMenuOpen && (
-          <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-[100] flex flex-col p-2">
-            {LABEL_OPTIONS.map((option) => (
+          <div className="absolute top-full left-0 mt-2 w-64 max-h-80 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl z-[100] flex flex-col p-2">
+            {isLoading && <p className="p-2 text-sm text-gray-500">Загрузка...</p>}
+            {error && (
+              <div role="alert" className="p-2 text-sm text-red-600">
+                {error}
+                <button className="ml-2 underline" onClick={() => {
+                  setError("");
+                  setIsLoading(true);
+                  setRetry((value) => value + 1);
+                }}>Повторить</button>
+              </div>
+            )}
+            {options.map((option) => (
               <button
                 key={option.id}
                 onClick={() => {
@@ -65,7 +78,7 @@ const EditPanel = ({
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg text-sm transition-colors text-left"
               >
                 <span>{option.icon}</span>
-                <span>{option.text}</span>
+                <span className="min-w-0 break-words">{option.text}</span>
               </button>
             ))}
           </div>

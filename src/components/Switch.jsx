@@ -1,26 +1,11 @@
-const Switch = ({ checked, handleChange, disabled = false }) => {
-  return (
-    <button
-      type="button"
-      onClick={handleChange}
-      disabled={disabled}
-      className={`
-        relative inline-flex h-6 w-11 rounded-full
-        transition-colors duration-300 ease-in-out
-        ${checked ? "bg-green-500" : "bg-gray-300"}
-        ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
-      `}
-    >
-      <span
-        className={`
-          absolute top-1/2 left-0 h-5 w-5 rounded-full bg-white
-          -translate-y-1/2 transform
-          transition-transform duration-300 ease-in-out
-          ${checked ? "translate-x-[22px]" : "translate-x-[2px]"}
-        `}
-      />
-    </button>
-  );
-};
+const Switch = ({ checked, handleChange, disabled = false, label, ...props }) => (
+  <button type="button" role="switch" aria-checked={checked} aria-label={label}
+    onClick={handleChange} disabled={disabled} {...props}
+    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2
+      disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-gray-900' : 'bg-gray-300'}`}>
+    <span aria-hidden="true" className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+  </button>
+);
 
 export default Switch;

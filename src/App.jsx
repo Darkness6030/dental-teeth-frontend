@@ -6,6 +6,7 @@ import NavigationBar from "./components/NavigationBar";
 import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import MainPage from "./pages/MainPage";
+import ImagesPage from "./pages/ImagesPage";
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -59,6 +60,7 @@ function App() {
 
           <div className="flex-1">
             <Routes>
+              <Route path="/images" element={<ImagesPage key={currentUser?.id} currentUser={currentUser} />} />
               <Route
                 path="/"
                 element={<MainPage currentUser={currentUser} />}
