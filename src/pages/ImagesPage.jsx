@@ -86,8 +86,9 @@ export default function ImagesPage({ currentUser }) {
 }
 
 function WebsiteImagesPage({ currentUser, onProdoctor, onActiveCase }) {
-  const { workspace, setWorkspace, ready, draftStatus, history, replaceWorkspace } =
-    useCollageWorkspace(currentUser?.id);
+  const { workspace, setWorkspace, ready, draftStatus, replaceWorkspace } = useCollageWorkspace(
+    currentUser?.id,
+  );
   const firstScreenRef = useRef(null);
   const [navigationHeight, setNavigationHeight] = useState(64);
   useLayoutEffect(() => {
@@ -330,21 +331,6 @@ function WebsiteImagesPage({ currentUser, onProdoctor, onActiveCase }) {
         <CasePageHeading
           title="Коллаж До/После"
           disabled={locked}
-          history={{
-            ...history,
-            undo: () => {
-              history.undo();
-              setFreshEditor(false);
-              setEditorSession((value) => value + 1);
-              setSaveMessage('');
-            },
-            redo: () => {
-              history.redo();
-              setFreshEditor(false);
-              setEditorSession((value) => value + 1);
-              setSaveMessage('');
-            },
-          }}
           onNew={() => {
             setWorkspace(emptyWorkspace());
             setPhotoErrors({});

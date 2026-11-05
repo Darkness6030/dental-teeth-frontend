@@ -1,4 +1,4 @@
-import { CaseButton, CaseField, CaseRange, CaseUndoControls } from './CaseUI.jsx';
+import { CaseButton, CaseField, CaseRange } from './CaseUI.jsx';
 import { useEffect, useRef, useState } from 'react';
 import {
   DEFAULT_ADJUSTMENT,
@@ -309,7 +309,6 @@ export default function CollageEditor({
           <h2>Редактор коллажа</h2>
         </div>
         <div className="case-actions">
-          <CaseUndoControls history={history} disabled={!images || saving || downloading} />
           <CaseButton onClick={onSources}>Исходные фото</CaseButton>
           <CaseButton
             disabled={!images}

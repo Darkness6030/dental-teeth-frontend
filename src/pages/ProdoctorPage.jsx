@@ -50,14 +50,10 @@ function PhotoPreview({ photo, className = '' }) {
 }
 
 export default function ProdoctorPage({ currentUser, sourceId }) {
-  const {
-    workspace,
-    setWorkspace,
-    ready,
-    draftStatus,
-    history: actions,
-    replaceWorkspace,
-  } = useCollageWorkspace(currentUser?.id, 'prodoctor');
+  const { workspace, setWorkspace, ready, draftStatus, replaceWorkspace } = useCollageWorkspace(
+    currentUser?.id,
+    'prodoctor',
+  );
   const [history, setHistory] = useState([]);
   const [hasMore, setHasMore] = useState(false);
   const [historyError, setHistoryError] = useState('');
@@ -284,17 +280,6 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
       <CasePageHeading
         title="Кейс для ПроДокторов"
         disabled={locked}
-        history={{
-          ...actions,
-          undo: () => {
-            actions.undo();
-            setMessage('');
-          },
-          redo: () => {
-            actions.redo();
-            setMessage('');
-          },
-        }}
         onNew={() => {
           update(emptyProdoctorWorkspace());
           setShowErrors(false);

@@ -38,14 +38,13 @@ export function CaseRemoveButton({ compact = false, ...props }) {
   );
 }
 
-export function CasePageHeading({ title, disabled, onNew, history }) {
+export function CasePageHeading({ title, disabled, onNew }) {
   return (
     <header className="case-page-heading">
       <div>
         <h1>{title}</h1>
       </div>
       <div className="case-actions">
-        {history && <CaseUndoControls history={history} disabled={disabled} />}
         <CaseButton disabled={disabled} onClick={onNew}>
           Новый кейс
         </CaseButton>
@@ -76,47 +75,6 @@ export function CaseField({ label, hint, error, className = '', children }) {
         </span>
       )}
     </label>
-  );
-}
-
-export function CaseUndoControls({ history, disabled = false }) {
-  return (
-    <div className="case-actions" role="group" aria-label="История действий">
-      <CaseButton
-        compact
-        disabled={disabled || !history.canUndo}
-        onClick={history.undo}
-        title="Отменить последнее действие"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path
-            d="M6 3 2 7l4 4M2 7h7a4 4 0 0 1 4 4v2"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        Отменить
-      </CaseButton>
-      <CaseButton
-        compact
-        disabled={disabled || !history.canRedo}
-        onClick={history.redo}
-        title="Повторить отменённое действие"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path
-            d="m10 3 4 4-4 4m4-4H7a4 4 0 0 0-4 4v2"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        Повторить
-      </CaseButton>
-    </div>
   );
 }
 
