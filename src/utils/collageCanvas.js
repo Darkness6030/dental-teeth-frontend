@@ -1,4 +1,4 @@
-import fontUrl from "../assets/InterRegular.ttf";
+import fontUrl from '../assets/InterRegular.ttf';
 
 export const DEFAULT_ADJUSTMENT = { zoom: 100, x: 0, y: 0, rotation: 0, brightness: 100 };
 export const DEFAULT_EXPORT = { width: 1388, height: 1112, format: 'webp', quality: 92, split: 50 };
@@ -15,7 +15,9 @@ export function normalizeExportSettings(settings) {
 let fontPromise;
 export function loadCollageFont() {
   if (!fontPromise) {
-    fontPromise = new FontFace('CollageInter', `url(${fontUrl})`).load().then((font) => document.fonts.add(font));
+    fontPromise = new FontFace('CollageInter', `url(${fontUrl})`)
+      .load()
+      .then((font) => document.fonts.add(font));
   }
   return fontPromise;
 }
@@ -30,13 +32,14 @@ export function loadImage(src) {
 }
 
 export function photoRotation(matrix, manualRotation = 0) {
-  return Math.atan2(matrix[1][0], matrix[0][0]) * 180 / Math.PI + manualRotation;
+  return (Math.atan2(matrix[1][0], matrix[0][0]) * 180) / Math.PI + manualRotation;
 }
 
 // Apply manual tilt around the aligned frame centre, after automatic alignment.
 function rotatedPhotoMatrix(matrix, degrees = 0) {
-  const angle = degrees * Math.PI / 180;
-  const cos = Math.cos(angle), sin = Math.sin(angle);
+  const angle = (degrees * Math.PI) / 180;
+  const cos = Math.cos(angle),
+    sin = Math.sin(angle);
   const [[a, c, tx], [b, d, ty]] = matrix;
   return [
     [cos * a - sin * b, cos * c - sin * d, 650 + cos * (tx - 650) - sin * (ty - 478)],
@@ -53,20 +56,34 @@ export function fitPhotoAdjustment(photo, matrix, edit, split, key, fullFrame = 
   const [[a, c, tx], [b, d, ty]] = rotatedPhotoMatrix(matrix, edit.rotation);
   const determinant = a * d - b * c;
   const inverse = (x, y) => [(d * x - c * y) / determinant, (-b * x + a * y) / determinant];
-  const divider = 1300 * split / 100;
+  const divider = (1300 * split) / 100;
   const left = fullFrame || key === 'before' ? 0 : divider;
   const right = fullFrame || key === 'after' ? 1300 : divider;
-  const corners = [[left, 0], [right, 0], [left, 956], [right, 956]];
+  const corners = [
+    [left, 0],
+    [right, 0],
+    [left, 956],
+    [right, 956],
+  ];
   const relative = corners.map(([x, y]) => inverse(x - 650, y - 478));
-  const extent = (points, axis) => [Math.min(...points.map((p) => p[axis])), Math.max(...points.map((p) => p[axis]))];
-  const [minX, maxX] = extent(relative, 0), [minY, maxY] = extent(relative, 1);
+  const extent = (points, axis) => [
+    Math.min(...points.map((p) => p[axis])),
+    Math.max(...points.map((p) => p[axis])),
+  ];
+  const [minX, maxX] = extent(relative, 0),
+    [minY, maxY] = extent(relative, 1);
   const margin = Math.min(2, width / 100, height / 100);
-  const minimum = Math.max((maxX - minX) / (width - 2 * margin), (maxY - minY) / (height - 2 * margin));
+  const minimum = Math.max(
+    (maxX - minX) / (width - 2 * margin),
+    (maxY - minY) / (height - 2 * margin),
+  );
   const zoom = Math.max(edit.zoom / 100, minimum);
-  const offsetX = edit.x * 13, offsetY = edit.y * 9.56;
+  const offsetX = edit.x * 13,
+    offsetY = edit.y * 9.56;
   const origin = inverse(650 - tx - offsetX / zoom, 478 - ty - offsetY / zoom);
   const source = relative.map(([x, y]) => [origin[0] + x / zoom, origin[1] + y / zoom]);
-  const [x1, x2] = extent(source, 0), [y1, y2] = extent(source, 1);
+  const [x1, x2] = extent(source, 0),
+    [y1, y2] = extent(source, 1);
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const dx = clamp(0, margin - x1, width - margin - x2);
   const dy = clamp(0, margin - y1, height - margin - y2);
@@ -79,13 +96,35 @@ export function fitPhotoAdjustment(photo, matrix, edit, split, key, fullFrame = 
   };
 }
 
-export function fitCollageAdjustments(photos, matrices, edits, split, sharedZoom = false, fullFrame = false) {
-  let fitted = Object.fromEntries(['before', 'after'].map((key) =>
-    [key, fitPhotoAdjustment(photos[key], matrices[key], edits[key], split, key, fullFrame)]));
+export function fitCollageAdjustments(
+  photos,
+  matrices,
+  edits,
+  split,
+  sharedZoom = false,
+  fullFrame = false,
+) {
+  let fitted = Object.fromEntries(
+    ['before', 'after'].map((key) => [
+      key,
+      fitPhotoAdjustment(photos[key], matrices[key], edits[key], split, key, fullFrame),
+    ]),
+  );
   if (sharedZoom) {
     const zoom = Math.max(fitted.before.zoom, fitted.after.zoom);
-    fitted = Object.fromEntries(['before', 'after'].map((key) =>
-      [key, fitPhotoAdjustment(photos[key], matrices[key], { ...edits[key], zoom }, split, key, fullFrame)]));
+    fitted = Object.fromEntries(
+      ['before', 'after'].map((key) => [
+        key,
+        fitPhotoAdjustment(
+          photos[key],
+          matrices[key],
+          { ...edits[key], zoom },
+          split,
+          key,
+          fullFrame,
+        ),
+      ]),
+    );
   }
   return fitted;
 }
@@ -105,7 +144,14 @@ function drawPhoto(ctx, frame, photo, matrix, edit) {
   ctx.translate((frame.width - 1300 * cover) / 2, (frame.height - 956 * cover) / 2);
   ctx.scale(cover, cover);
   const rotated = rotatedPhotoMatrix(matrix, edit.rotation);
-  ctx.transform(rotated[0][0], rotated[1][0], rotated[0][1], rotated[1][1], rotated[0][2], rotated[1][2]);
+  ctx.transform(
+    rotated[0][0],
+    rotated[1][0],
+    rotated[0][1],
+    rotated[1][1],
+    rotated[0][2],
+    rotated[1][2],
+  );
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.filter = `brightness(${edit.brightness}%)`;
@@ -114,17 +160,30 @@ function drawPhoto(ctx, frame, photo, matrix, edit) {
 }
 
 /** Shared renderer for the live preview and the exported image. No CSS transforms in exports. */
-export function drawCollage(canvas, photos, matrices, adjustments, settings, preview = false) {
+export function drawCollage(
+  canvas,
+  photos,
+  matrices,
+  adjustments,
+  settings,
+  preview = false,
+  selected = null,
+) {
   settings = normalizeExportSettings(settings);
   const ratio = preview ? Math.min(1, 1600 / Math.max(settings.width, settings.height)) : 1;
   canvas.width = Math.round(settings.width * ratio);
   canvas.height = Math.round(settings.height * ratio);
   const ctx = canvas.getContext('2d');
-  const width = canvas.width, height = canvas.height;
+  const width = canvas.width,
+    height = canvas.height;
   const scale = Math.min(width / 1388, height / 1112);
-  const frame = { x: width * 40 / 1388, y: height * 78 / 1112,
-    width: width * 1300 / 1388, height: height * 956 / 1112 };
-  const divider = frame.width * settings.split / 100;
+  const frame = {
+    x: (width * 40) / 1388,
+    y: (height * 78) / 1112,
+    width: (width * 1300) / 1388,
+    height: (height * 956) / 1112,
+  };
+  const divider = (frame.width * settings.split) / 100;
   ctx.fillStyle = 'white';
   ctx.fillRect(0, 0, width, height);
   ctx.save();
@@ -156,14 +215,32 @@ export function drawCollage(canvas, photos, matrices, adjustments, settings, pre
     ctx.lineWidth = 2 * scale;
     ctx.stroke();
     ctx.restore();
+    if (selected) {
+      ctx.save();
+      ctx.beginPath();
+      const left = selected === 'before' ? 0 : divider;
+      const width = selected === 'before' ? divider : frame.width - divider;
+      ctx.rect(frame.x + left, frame.y, width, frame.height);
+      ctx.clip();
+      roundedRect(ctx, frame.x, frame.y, frame.width, frame.height, 100 * scale);
+      ctx.strokeStyle = '#607fa8';
+      ctx.lineWidth = 5 * scale;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   ctx.font = `${50 * scale}px CollageInter, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const labelWidth = 276 * scale, labelHeight = 156 * scale;
-  for (const [key, text, color] of [['before', 'До', '#8e8386'], ['after', 'После', '#a68c89']]) {
-    const x = key === 'before' ? frame.x + 36 * scale : frame.x + frame.width - 34 * scale - labelWidth;
+  const labelWidth = 276 * scale,
+    labelHeight = 156 * scale;
+  for (const [key, text, color] of [
+    ['before', 'До', '#8e8386'],
+    ['after', 'После', '#a68c89'],
+  ]) {
+    const x =
+      key === 'before' ? frame.x + 36 * scale : frame.x + frame.width - 34 * scale - labelWidth;
     const y = frame.y + 34 * scale;
     ctx.fillStyle = color;
     roundedRect(ctx, x, y, labelWidth, labelHeight, 78 * scale);
@@ -174,7 +251,14 @@ export function drawCollage(canvas, photos, matrices, adjustments, settings, pre
   const handleX = frame.x + divider;
   const handleY = frame.y + frame.height - 124 * scale;
   ctx.fillStyle = 'white';
-  roundedRect(ctx, handleX - 122 * scale, handleY - 88 * scale, 244 * scale, 176 * scale, 88 * scale);
+  roundedRect(
+    ctx,
+    handleX - 122 * scale,
+    handleY - 88 * scale,
+    244 * scale,
+    176 * scale,
+    88 * scale,
+  );
   ctx.fill();
   ctx.fillStyle = '#19191e';
   for (const direction of [-1, 1]) {
@@ -197,10 +281,10 @@ async function encodeCanvas(canvas, settings) {
   settings = normalizeExportSettings(settings);
   const type = settings.format === 'jpg' ? 'image/jpeg' : `image/${settings.format}`;
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, settings.quality / 100));
-  if (!blob || blob.type !== type) throw new Error('Браузер не поддерживает выбранный формат. Выберите PNG или JPG.');
+  if (!blob || blob.type !== type)
+    throw new Error('Браузер не поддерживает выбранный формат. Выберите PNG или JPG.');
   return blob;
 }
-
 
 export function collageThumbnail(canvas) {
   const preview = document.createElement('canvas');
@@ -208,7 +292,7 @@ export function collageThumbnail(canvas) {
   preview.width = Math.round(canvas.width * ratio);
   preview.height = Math.round(canvas.height * ratio);
   preview.getContext('2d').drawImage(canvas, 0, 0, preview.width, preview.height);
-  return preview.toDataURL('image/jpeg', .75);
+  return preview.toDataURL('image/jpeg', 0.75);
 }
 
 export function downloadBlob(blob, filename) {

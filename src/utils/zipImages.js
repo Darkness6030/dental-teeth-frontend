@@ -9,8 +9,10 @@ function crc32(bytes) {
 }
 
 export async function zipImages(entries) {
-  const files = [], directory = [];
-  let offset = 0, directorySize = 0;
+  const files = [],
+    directory = [];
+  let offset = 0,
+    directorySize = 0;
   for (const entry of entries) {
     const name = new TextEncoder().encode(entry.name);
     const bytes = new Uint8Array(await entry.blob.arrayBuffer());

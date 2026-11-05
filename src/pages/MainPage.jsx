@@ -1,13 +1,13 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { detectTeeth, exportImage } from "../api";
-import DetectionBox from "../components/DetectionBox.jsx";
-import DetectionPanel from "../components/panels/DetectionPanel.jsx";
-import EditPanel from "../components/panels/EditPanel.jsx";
-import ExportPanel from "../components/panels/ExportPanel.jsx";
-import FileUploadPanel from "../components/panels/FileUploadPanel.jsx";
-import ImageAdjustPanel from "../components/panels/ImageAdjustPanel.jsx";
-import { useProcessImage } from "../hooks/useProcessImage.js";
+import { AnimatePresence, motion as Motion } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { detectTeeth, exportImage } from '../api';
+import DetectionBox from '../components/DetectionBox.jsx';
+import DetectionPanel from '../components/panels/DetectionPanel.jsx';
+import EditPanel from '../components/panels/EditPanel.jsx';
+import ExportPanel from '../components/panels/ExportPanel.jsx';
+import FileUploadPanel from '../components/panels/FileUploadPanel.jsx';
+import ImageAdjustPanel from '../components/panels/ImageAdjustPanel.jsx';
+import { useProcessImage } from '../hooks/useProcessImage.js';
 
 const MIN_BOX_WIDTH = 300;
 const MIN_BOX_HEIGHT = 300;
@@ -28,7 +28,7 @@ function MainPage() {
   const [flipHorizontal, setFlipHorizontal] = useState(false);
   const [flipVertical, setFlipVertical] = useState(false);
 
-  const [jawType, setJawType] = useState("auto");
+  const [jawType, setJawType] = useState('auto');
   const [detectedJawType, setDetectedJawType] = useState(null);
 
   const [detections, setDetections] = useState([]);
@@ -80,7 +80,7 @@ function MainPage() {
     setFlipVertical(false);
 
     setDetections([]);
-    setJawType("auto");
+    setJawType('auto');
     setDetectedJawType(null);
 
     setSelectedIndex(null);
@@ -106,14 +106,10 @@ function MainPage() {
         flipVertical,
       });
 
-      const result = await detectTeeth(
-        processedImage,
-        jawType,
-      );
+      const result = await detectTeeth(processedImage, jawType);
 
       const cropOffsetX = crop?.x ?? 0;
       const cropOffsetY = crop?.y ?? 0;
-
 
       setDetections(
         result.detections.map((detection) => {
@@ -149,7 +145,7 @@ function MainPage() {
             label_x,
             label_y,
           };
-        })
+        }),
       );
 
       setJawType(result.jaw_type);
@@ -169,7 +165,7 @@ function MainPage() {
     setDetections((value) => [
       ...value,
       {
-        tooth_number: "",
+        tooth_number: '',
         x_min: startX,
         y_min: startY,
         x_max: startX + boxSize,
@@ -191,9 +187,7 @@ function MainPage() {
   const deleteSelectedDetection = useCallback(() => {
     if (selectedIndex === null) return;
     setSelectedIndex(null);
-    setDetections((value) =>
-      value.filter((_, index) => index !== selectedIndex)
-    );
+    setDetections((value) => value.filter((_, index) => index !== selectedIndex));
   }, [selectedIndex]);
 
   const updateDetection = (index, updates) => {
@@ -206,13 +200,13 @@ function MainPage() {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Delete" || event.key === "Backspace") {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
         deleteSelectedDetection();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [deleteSelectedDetection]);
 
   useEffect(() => {
@@ -227,7 +221,7 @@ function MainPage() {
       const deltaX = (event.clientX - startX) / scaleX;
       const deltaY = (event.clientY - startY) / scaleY;
 
-      if (type === "MOVE") {
+      if (type === 'MOVE') {
         updateDetection(index, {
           x_min: initialDetection.x_min + deltaX,
           y_min: initialDetection.y_min + deltaY,
@@ -238,21 +232,21 @@ function MainPage() {
         });
       }
 
-      if (type === "RESIZE") {
+      if (type === 'RESIZE') {
         updateDetection(index, {
           x_max: initialDetection.x_max + deltaX,
           y_max: initialDetection.y_max + deltaY,
         });
       }
 
-      if (type === "LABEL_MOVE") {
+      if (type === 'LABEL_MOVE') {
         updateDetection(index, {
           label_x: initialDetection.label_x + deltaX,
           label_y: initialDetection.label_y + deltaY,
         });
       }
 
-      if (type === "CROP_RESIZE") {
+      if (type === 'CROP_RESIZE') {
         const { corner, initialCrop } = dragState;
 
         const rect = containerRef.current.getBoundingClientRect();
@@ -269,10 +263,10 @@ function MainPage() {
         let x2 = initialCrop.x + initialCrop.width;
         let y2 = initialCrop.y + initialCrop.height;
 
-        if (corner.includes("r")) x2 = currentX;
-        if (corner.includes("l")) x1 = currentX;
-        if (corner.includes("b")) y2 = currentY;
-        if (corner.includes("t")) y1 = currentY;
+        if (corner.includes('r')) x2 = currentX;
+        if (corner.includes('l')) x1 = currentX;
+        if (corner.includes('b')) y2 = currentY;
+        if (corner.includes('t')) y1 = currentY;
 
         x1 = clamp(x1, 0, originalSize.width);
         x2 = clamp(x2, 0, originalSize.width);
@@ -280,12 +274,12 @@ function MainPage() {
         y2 = clamp(y2, 0, originalSize.height);
 
         if (Math.abs(x2 - x1) < 10) {
-          if (corner.includes("l")) x1 = x2 - 10;
+          if (corner.includes('l')) x1 = x2 - 10;
           else x2 = x1 + 10;
         }
 
         if (Math.abs(y2 - y1) < 10) {
-          if (corner.includes("t")) y1 = y2 - 10;
+          if (corner.includes('t')) y1 = y2 - 10;
           else y2 = y1 + 10;
         }
 
@@ -302,17 +296,19 @@ function MainPage() {
       if (dragState?.pointerId != null) {
         try {
           event.target.releasePointerCapture(dragState.pointerId);
-        } catch { }
+        } catch {
+          /* Pointer capture may already have ended. */
+        }
       }
       setDragState(null);
     };
 
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
 
     return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [dragState, displaySize, originalSize]);
 
@@ -334,8 +330,8 @@ function MainPage() {
       });
 
     updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
   }, [imageSrc]);
 
   const initiateDrag = (event, index, type) => {
@@ -372,7 +368,7 @@ function MainPage() {
         flipVertical,
       });
 
-      const adjustedDetections = detections.map(detection => ({
+      const adjustedDetections = detections.map((detection) => ({
         ...detection,
         x_min: detection.x_min - crop.x,
         x_max: detection.x_max - crop.x,
@@ -382,13 +378,10 @@ function MainPage() {
         label_y: detection.label_y - crop.y,
       }));
 
-      const result = await exportImage(
-        processedImage,
-        adjustedDetections,
-      );
+      const result = await exportImage(processedImage, adjustedDetections);
 
-      const link = document.createElement("a");
-      link.download = "result.png";
+      const link = document.createElement('a');
+      link.download = 'result.png';
       link.href = result.image;
       link.click();
     } finally {
@@ -401,7 +394,7 @@ function MainPage() {
     event.currentTarget.setPointerCapture(event.pointerId);
 
     setDragState({
-      type: "CROP_RESIZE",
+      type: 'CROP_RESIZE',
       corner,
       startX: event.clientX,
       startY: event.clientY,
@@ -476,7 +469,8 @@ function MainPage() {
             <div className="lg:col-span-3 order-2 lg:order-1">
               <ImageAdjustPanel
                 rotation={rotation}
-                setRotation={setRotation} Ò
+                setRotation={setRotation}
+                Ò
                 brightness={brightness}
                 setBrightness={setBrightness}
                 contrast={contrast}
@@ -501,30 +495,27 @@ function MainPage() {
                 >
                   <AnimatePresence>
                     {showEditHint && (
-                      <motion.div
+                      <Motion.div
                         initial={{
                           opacity: 0,
                           scale: 0.95,
-                          y: detectedJawType === "lower" ? -8 : 8,
+                          y: detectedJawType === 'lower' ? -8 : 8,
                         }}
                         animate={{ opacity: 0.75, scale: 1, y: 0 }}
                         exit={{
                           opacity: 0,
                           scale: 0.95,
-                          y: detectedJawType === "lower" ? -8 : 8,
+                          y: detectedJawType === 'lower' ? -8 : 8,
                         }}
                         transition={{ duration: 0.2 }}
                         className={`absolute z-50 pointer-events-none
-                          ${detectedJawType === "lower"
-                            ? "top-[20px]"
-                            : "bottom-[20px]"
-                          }
+                          ${detectedJawType === 'lower' ? 'top-[20px]' : 'bottom-[20px]'}
                     `}
                       >
                         <div className="bg-gray-900/70 backdrop-blur-md text-white text-sm px-4 py-2 rounded-full shadow-lg border border-white/10">
                           Введите номер зуба с клавиатуры
                         </div>
-                      </motion.div>
+                      </Motion.div>
                     )}
                   </AnimatePresence>
 
@@ -540,7 +531,7 @@ function MainPage() {
                           scaleX(${flipHorizontal ? -1 : 1})
                           scaleY(${flipVertical ? -1 : 1})
                         `,
-                        transformOrigin: "center",
+                        transformOrigin: 'center',
                         filter: `brightness(${brightness}%) contrast(${contrast}%)`,
                       }}
                     />
@@ -568,8 +559,8 @@ function MainPage() {
                           <div
                             className="absolute inset-0 z-[80] pointer-events-none"
                             style={{
-                              backdropFilter: "blur(6px)",
-                              WebkitBackdropFilter: "blur(6px)",
+                              backdropFilter: 'blur(6px)',
+                              WebkitBackdropFilter: 'blur(6px)',
                               clipPath: `
                                 polygon(
                                   0% 0%,
@@ -648,7 +639,7 @@ function MainPage() {
             }
           }}
           onBlur={() => {
-            if (hiddenInputRef.current) hiddenInputRef.current.value = "";
+            if (hiddenInputRef.current) hiddenInputRef.current.value = '';
           }}
         />
       </div>

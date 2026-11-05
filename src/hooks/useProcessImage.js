@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from 'react';
 
 export function useProcessImage() {
   const processImage = useCallback(
@@ -22,8 +22,8 @@ export function useProcessImage() {
       const originalHeight = imageElement.naturalHeight;
 
       const rotationRadians = (rotation * Math.PI) / 180;
-      const rotatedCanvas = document.createElement("canvas");
-      const rotatedContext = rotatedCanvas.getContext("2d");
+      const rotatedCanvas = document.createElement('canvas');
+      const rotatedContext = rotatedCanvas.getContext('2d');
 
       rotatedCanvas.width = originalWidth;
       rotatedCanvas.height = originalHeight;
@@ -34,24 +34,17 @@ export function useProcessImage() {
 
       rotatedContext.translate(originalWidth / 2, originalHeight / 2);
       rotatedContext.rotate(rotationRadians);
-      rotatedContext.scale(
-        flipHorizontal ? -1 : 1,
-        flipVertical ? -1 : 1
-      );
+      rotatedContext.scale(flipHorizontal ? -1 : 1, flipVertical ? -1 : 1);
 
-      rotatedContext.drawImage(
-        imageElement,
-        -originalWidth / 2,
-        -originalHeight / 2
-      );
+      rotatedContext.drawImage(imageElement, -originalWidth / 2, -originalHeight / 2);
 
       const cropX = crop?.x ?? 0;
       const cropY = crop?.y ?? 0;
       const cropWidth = crop?.width ?? originalWidth;
       const cropHeight = crop?.height ?? originalHeight;
 
-      const croppedCanvas = document.createElement("canvas");
-      const croppedContext = croppedCanvas.getContext("2d");
+      const croppedCanvas = document.createElement('canvas');
+      const croppedContext = croppedCanvas.getContext('2d');
 
       croppedCanvas.width = cropWidth;
       croppedCanvas.height = cropHeight;
@@ -64,12 +57,12 @@ export function useProcessImage() {
         0,
         0,
         cropWidth,
-        cropHeight
+        cropHeight,
       );
 
-      return croppedCanvas.toDataURL("image/jpeg", quality / 100);
+      return croppedCanvas.toDataURL('image/jpeg', quality / 100);
     },
-    []
+    [],
   );
 
   return { processImage };

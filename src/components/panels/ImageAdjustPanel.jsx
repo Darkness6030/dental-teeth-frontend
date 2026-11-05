@@ -1,6 +1,6 @@
-import Slider from "../Slider.jsx";
-import Switch from "../Switch.jsx";
-import ControlPanel from "./ControlPanel.jsx";
+import Slider from '../Slider.jsx';
+import Switch from '../Switch.jsx';
+import ControlPanel from './ControlPanel.jsx';
 
 const ImageAdjustPanel = ({
   rotation,
@@ -14,7 +14,7 @@ const ImageAdjustPanel = ({
   flipHorizontal,
   setFlipHorizontal,
   flipVertical,
-  setFlipVertical
+  setFlipVertical,
 }) => {
   return (
     <ControlPanel title="5. Коррекция изображения">
@@ -22,61 +22,33 @@ const ImageAdjustPanel = ({
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Поворот</span>
-            <span className="text-sm text-gray-600 tabular-nums">
-              {rotation}°
-            </span>
+            <span className="text-sm text-gray-600 tabular-nums">{rotation}°</span>
           </div>
-          <Slider
-            min={-180}
-            max={180}
-            value={rotation}
-            onChange={setRotation}
-          />
+          <Slider min={-180} max={180} value={rotation} onChange={setRotation} />
         </div>
 
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Яркость</span>
-            <span className="text-sm text-gray-600 tabular-nums">
-              {brightness}%
-            </span>
+            <span className="text-sm text-gray-600 tabular-nums">{brightness}%</span>
           </div>
-          <Slider
-            min={0}
-            max={200}
-            value={brightness}
-            onChange={setBrightness}
-          />
+          <Slider min={0} max={200} value={brightness} onChange={setBrightness} />
         </div>
 
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Контраст</span>
-            <span className="text-sm text-gray-600 tabular-nums">
-              {contrast}%
-            </span>
+            <span className="text-sm text-gray-600 tabular-nums">{contrast}%</span>
           </div>
-          <Slider
-            min={0}
-            max={200}
-            value={contrast}
-            onChange={setContrast}
-          />
+          <Slider min={0} max={200} value={contrast} onChange={setContrast} />
         </div>
 
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Качество</span>
-            <span className="text-sm text-gray-600 tabular-nums">
-              {quality}%
-            </span>
+            <span className="text-sm text-gray-600 tabular-nums">{quality}%</span>
           </div>
-          <Slider
-            min={0}
-            max={100}
-            value={quality}
-            onChange={setQuality}
-          />
+          <Slider min={0} max={100} value={quality} onChange={setQuality} />
         </div>
 
         <div className="border-t border-gray-200" />
@@ -89,9 +61,7 @@ const ImageAdjustPanel = ({
                 checked={flipHorizontal}
                 handleChange={() => setFlipHorizontal((value) => !value)}
               />
-              <span className="text-sm text-gray-600 text-center">
-                По горизонтали
-              </span>
+              <span className="text-sm text-gray-600 text-center">По горизонтали</span>
             </div>
 
             <div className="flex flex-col items-center gap-2">
@@ -99,13 +69,10 @@ const ImageAdjustPanel = ({
                 checked={flipVertical}
                 handleChange={() => setFlipVertical((value) => !value)}
               />
-              <span className="text-sm text-gray-600 text-center">
-                По вертикали
-              </span>
+              <span className="text-sm text-gray-600 text-center">По вертикали</span>
             </div>
           </div>
         </div>
-
       </div>
     </ControlPanel>
   );

@@ -1,29 +1,29 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { login } from "../api";
-import Spinner from "../components/Spinner";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { login } from '../api';
+import Spinner from '../components/Spinner';
 
 function LoginPage({ setCurrentUser }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorText, setErrorText] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorText, setErrorText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
   const handleLogin = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    setErrorText("");
+    setErrorText('');
 
     try {
       const user = await login(username, password);
       setCurrentUser(user);
-      navigate("/");
+      navigate('/');
     } catch (error) {
       if (error.response?.status === 401) {
-        setErrorText("Неверный логин или пароль");
+        setErrorText('Неверный логин или пароль');
       } else {
-        setErrorText("Произошла ошибка. Попробуйте позже");
+        setErrorText('Произошла ошибка. Попробуйте позже');
       }
     } finally {
       setIsLoading(false);
@@ -35,9 +35,7 @@ function LoginPage({ setCurrentUser }) {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-gray-100 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <h2 className="text-[36px] font-semibold leading-[90%] text-[#131927]">
-              Вход
-            </h2>
+            <h2 className="text-[36px] font-semibold leading-[90%] text-[#131927]">Вход</h2>
             <p className="mt-3 text-sm text-gray-500">
               Введите логин и пароль для доступа в систему
             </p>
@@ -51,10 +49,7 @@ function LoginPage({ setCurrentUser }) {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
                 Имя пользователя
               </label>
               <input
@@ -69,10 +64,7 @@ function LoginPage({ setCurrentUser }) {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Пароль
               </label>
               <input
@@ -94,7 +86,7 @@ function LoginPage({ setCurrentUser }) {
                        hover:opacity-95 transition disabled:opacity-50"
             >
               <span className="flex items-center justify-center h-[1.5rem]">
-                {isLoading ? <Spinner /> : "Войти"}
+                {isLoading ? <Spinner /> : 'Войти'}
               </span>
             </button>
           </form>

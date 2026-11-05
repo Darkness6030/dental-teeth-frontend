@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { getLabelTypes } from "../../api";
-import ControlPanel from "./ControlPanel.jsx";
+import { useEffect, useState } from 'react';
+import { getLabelTypes } from '../../api';
+import ControlPanel from './ControlPanel.jsx';
 
 const EditPanel = ({
   imageSrc,
@@ -9,26 +9,31 @@ const EditPanel = ({
   deleteSelectedDetection,
   isLabelMenuOpen,
   setIsLabelMenuOpen,
-  updateDetection
+  updateDetection,
 }) => {
   const [labelTypes, setLabelTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
-    getLabelTypes().then((labels) => {
-      if (active) setLabelTypes(labels);
-    }).catch(() => {
-      if (active) setError("Не удалось загрузить метки");
-    }).finally(() => {
-      if (active) setIsLoading(false);
-    });
-    return () => { active = false; };
+    getLabelTypes()
+      .then((labels) => {
+        if (active) setLabelTypes(labels);
+      })
+      .catch(() => {
+        if (active) setError('Не удалось загрузить метки');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [retry]);
 
-  const options = [{ id: "none", text: "Ничего", icon: "🚫" }, ...labelTypes];
+  const options = [{ id: 'none', text: 'Ничего', icon: '🚫' }, ...labelTypes];
 
   return (
     <ControlPanel title="3. Редактирование">
@@ -58,21 +63,23 @@ const EditPanel = ({
             {error && (
               <div role="alert" className="p-2 text-sm text-red-600">
                 {error}
-                <button className="ml-2 underline" onClick={() => {
-                  setError("");
-                  setIsLoading(true);
-                  setRetry((value) => value + 1);
-                }}>Повторить</button>
+                <button
+                  className="ml-2 underline"
+                  onClick={() => {
+                    setError('');
+                    setIsLoading(true);
+                    setRetry((value) => value + 1);
+                  }}
+                >
+                  Повторить
+                </button>
               </div>
             )}
             {options.map((option) => (
               <button
                 key={option.id}
                 onClick={() => {
-                  updateDetection(
-                    selectedIndex,
-                    { label: option.id === "none" ? null : option }
-                  );
+                  updateDetection(selectedIndex, { label: option.id === 'none' ? null : option });
                   setIsLabelMenuOpen(false);
                 }}
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg text-sm transition-colors text-left"
@@ -94,6 +101,6 @@ const EditPanel = ({
       </button>
     </ControlPanel>
   );
-}
+};
 
 export default EditPanel;

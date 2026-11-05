@@ -1,9 +1,10 @@
-const database = () => new Promise((resolve, reject) => {
-  const request = indexedDB.open('dental-collage-drafts', 1);
-  request.onupgradeneeded = () => request.result.createObjectStore('drafts');
-  request.onsuccess = () => resolve(request.result);
-  request.onerror = () => reject(request.error);
-});
+const database = () =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open('dental-collage-drafts', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 
 export async function readLocalDraft(userId) {
   const db = await database();
@@ -13,7 +14,9 @@ export async function readLocalDraft(userId) {
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 }
 
 export async function writeLocalDraft(userId, draft) {
@@ -26,5 +29,7 @@ export async function writeLocalDraft(userId, draft) {
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error || new Error('Не удалось сохранить черновик.'));
     });
-  } finally { db.close(); }
+  } finally {
+    db.close();
+  }
 }

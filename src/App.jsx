@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { getUser, removeAccessToken } from "./api";
-import Loader from "./components/Loader";
-import NavigationBar from "./components/NavigationBar";
-import AdminPage from "./pages/AdminPage";
-import LoginPage from "./pages/LoginPage";
-import MainPage from "./pages/MainPage";
-import ImagesPage from "./pages/ImagesPage";
+import { useEffect, useState } from 'react';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { getUser, removeAccessToken } from './api';
+import Loader from './components/Loader';
+import NavigationBar from './components/NavigationBar';
+import AdminPage from './pages/AdminPage';
+import LoginPage from './pages/LoginPage';
+import MainPage from './pages/MainPage';
+import ImagesPage from './pages/ImagesPage';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -14,7 +14,7 @@ function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const isLoginPage = location.pathname === "/login";
+  const isLoginPage = location.pathname === '/login';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -22,9 +22,9 @@ function App() {
         setIsUserLoading(true);
         const user = await getUser();
         setCurrentUser(user);
-      } catch (error) {
+      } catch {
         setCurrentUser(null);
-        if (!isLoginPage) navigate("/login");
+        if (!isLoginPage) navigate('/login');
       } finally {
         setIsUserLoading(false);
       }
@@ -40,7 +40,7 @@ function App() {
   const handleLogout = () => {
     removeAccessToken();
     setCurrentUser(null);
-    navigate("/login");
+    navigate('/login');
   };
 
   return (
@@ -51,28 +51,17 @@ function App() {
         </div>
       ) : (
         <>
-          {!isLoginPage && (
-            <NavigationBar
-              currentUser={currentUser}
-              onLogout={handleLogout}
-            />
-          )}
+          {!isLoginPage && <NavigationBar currentUser={currentUser} onLogout={handleLogout} />}
 
           <div className="flex-1">
             <Routes>
-              <Route path="/images" element={<ImagesPage key={currentUser?.id} currentUser={currentUser} />} />
               <Route
-                path="/"
-                element={<MainPage currentUser={currentUser} />}
+                path="/images"
+                element={<ImagesPage key={currentUser?.id} currentUser={currentUser} />}
               />
-              <Route
-                path="/admin"
-                element={<AdminPage currentUser={currentUser} />}
-              />
-              <Route
-                path="/login"
-                element={<LoginPage setCurrentUser={setCurrentUser} />}
-              />
+              <Route path="/" element={<MainPage currentUser={currentUser} />} />
+              <Route path="/admin" element={<AdminPage currentUser={currentUser} />} />
+              <Route path="/login" element={<LoginPage setCurrentUser={setCurrentUser} />} />
             </Routes>
           </div>
         </>

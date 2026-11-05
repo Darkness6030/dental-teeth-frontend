@@ -1,17 +1,12 @@
-import { useEffect, useState } from "react";
-import {
-  createUser,
-  deleteUser,
-  getUsers,
-  updateUser,
-} from "../api";
-import LabelTypesAdmin from "../components/LabelTypesAdmin.jsx";
-import Switch from "../components/Switch";
+import { useEffect, useState } from 'react';
+import { createUser, deleteUser, getUsers, updateUser } from '../api';
+import LabelTypesAdmin from '../components/LabelTypesAdmin.jsx';
+import Switch from '../components/Switch';
 
 const emptyFormData = {
-  name: "",
-  username: "",
-  password: "",
+  name: '',
+  username: '',
+  password: '',
   is_admin: false,
 };
 
@@ -44,7 +39,7 @@ function AdminPage({ currentUser }) {
     setFormData({
       name: user.name,
       username: user.username,
-      password: "",
+      password: '',
       is_admin: user.is_admin,
     });
     setIsModalOpen(true);
@@ -61,16 +56,14 @@ function AdminPage({ currentUser }) {
 
     setUsers(
       users.map((other) =>
-        other.id === user.id
-          ? { ...other, is_admin: !other.is_admin }
-          : other
-      )
+        other.id === user.id ? { ...other, is_admin: !other.is_admin } : other,
+      ),
     );
 
     await updateUser(user.id, {
       name: user.name,
       username: user.username,
-      password: "",
+      password: '',
       is_admin: !user.is_admin,
     });
   };
@@ -88,11 +81,7 @@ function AdminPage({ currentUser }) {
         setUsers([newUser, ...users]);
       } else {
         const updatedUser = await updateUser(editingUserId, formData);
-        setUsers(
-          users.map((other) =>
-            other.id === updatedUser.id ? updatedUser : other
-          )
-        );
+        setUsers(users.map((other) => (other.id === updatedUser.id ? updatedUser : other)));
       }
 
       closeModal();
@@ -147,10 +136,7 @@ function AdminPage({ currentUser }) {
                   key={user.id}
                   className="cursor-pointer border-b border-gray-200 text-sm text-gray-800 hover:bg-gray-50"
                 >
-                  <td
-                    className="py-3 pr-4"
-                    onClick={() => openEditModal(user)}
-                  >
+                  <td className="py-3 pr-4" onClick={() => openEditModal(user)}>
                     <div className="flex items-center gap-2">
                       {user.name}
                       {isCurrentUser && (
@@ -161,21 +147,12 @@ function AdminPage({ currentUser }) {
                     </div>
                   </td>
 
-                  <td
-                    className="py-3 pr-4"
-                    onClick={() => openEditModal(user)}
-                  >
+                  <td className="py-3 pr-4" onClick={() => openEditModal(user)}>
                     {user.username}
                   </td>
 
                   <td className="py-3 pr-4">
-                    <div
-                      className={
-                        isCurrentUser
-                          ? "opacity-50 pointer-events-none"
-                          : ""
-                      }
-                    >
+                    <div className={isCurrentUser ? 'opacity-50 pointer-events-none' : ''}>
                       <Switch
                         checked={user.is_admin}
                         handleChange={() => handleToggleAdmin(user)}
@@ -188,10 +165,7 @@ function AdminPage({ currentUser }) {
 
             {users.length === 0 && (
               <tr>
-                <td
-                  colSpan={3}
-                  className="py-8 text-center text-sm text-gray-400"
-                >
+                <td colSpan={3} className="py-8 text-center text-sm text-gray-400">
                   Нет пользователей
                 </td>
               </tr>
@@ -213,15 +187,10 @@ function AdminPage({ currentUser }) {
           >
             <div className="flex items-start justify-between gap-4">
               <div className="text-base font-semibold text-gray-900">
-                {editingUserId === null
-                  ? "Добавить пользователя"
-                  : "Редактировать пользователя"}
+                {editingUserId === null ? 'Добавить пользователя' : 'Редактировать пользователя'}
               </div>
 
-              <button
-                onClick={closeModal}
-                className="text-sm text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={closeModal} className="text-sm text-gray-400 hover:text-gray-600">
                 Закрыть
               </button>
             </div>
@@ -231,54 +200,43 @@ function AdminPage({ currentUser }) {
                 <div className="text-xs font-semibold text-gray-700">ФИО</div>
                 <input
                   value={formData.name}
-                  onChange={(event) =>
-                    setFormData({ ...formData, name: event.target.value })
-                  }
+                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
                 />
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-gray-700">
-                  Имя пользователя
-                </div>
+                <div className="text-xs font-semibold text-gray-700">Имя пользователя</div>
                 <input
                   value={formData.username}
-                  onChange={(event) =>
-                    setFormData({ ...formData, username: event.target.value })
-                  }
+                  onChange={(event) => setFormData({ ...formData, username: event.target.value })}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
                 />
               </div>
 
               <div>
                 <div className="text-xs font-semibold text-gray-700">
-                  {editingUserId === null
-                    ? "Пароль"
-                    : "Новый пароль (необязательно)"}
+                  {editingUserId === null ? 'Пароль' : 'Новый пароль (необязательно)'}
                 </div>
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(event) =>
-                    setFormData({ ...formData, password: event.target.value })
-                  }
+                  onChange={(event) => setFormData({ ...formData, password: event.target.value })}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
                 />
               </div>
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              {editingUserId !== null &&
-                editingUserId !== currentUser?.id && (
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting || isSaving}
-                    className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
-                  >
-                    {isDeleting ? "Удаление..." : "Удалить"}
-                  </button>
-                )}
+              {editingUserId !== null && editingUserId !== currentUser?.id && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting || isSaving}
+                  className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+                >
+                  {isDeleting ? 'Удаление...' : 'Удалить'}
+                </button>
+              )}
 
               <button
                 onClick={handleSave}
@@ -286,12 +244,11 @@ function AdminPage({ currentUser }) {
                   isSaving ||
                   !formData.name.trim() ||
                   !formData.username.trim() ||
-                  (editingUserId === null &&
-                    !formData.password.trim())
+                  (editingUserId === null && !formData.password.trim())
                 }
                 className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-60"
               >
-                {isSaving ? "Сохранение..." : "Сохранить"}
+                {isSaving ? 'Сохранение...' : 'Сохранить'}
               </button>
             </div>
           </div>
