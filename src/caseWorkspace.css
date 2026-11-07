@@ -498,7 +498,6 @@
   cursor: pointer;
 }
 .case-export-controls {
-  border-top: 1px solid var(--case-line);
   padding-top: 16px;
 }
 .case-editor-save {
@@ -1598,12 +1597,7 @@
 .photo-toggle-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.photo-toggle-controls {
   padding-top: 12px;
-  border-top: 1px solid var(--case-line);
   gap: 10px;
 }
 .photo-toggle-controls .case-grid-switch {
@@ -1619,7 +1613,6 @@
 .photo-reset-controls {
   display: flex;
   padding-top: 10px;
-  border-top: 1px solid var(--case-line);
 }
 .case-workspace .case-photo-reset {
   width: 100%;
