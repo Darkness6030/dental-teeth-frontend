@@ -86,6 +86,7 @@ export default function PhotoTools({
             ['saturation', 'Насыщенность', 0, 200],
           ].map(([field, label, min, max]) => (
             <CaseRange
+              sliderOnly
               key={field}
               label={label}
               value={edit[field] ?? 100}
