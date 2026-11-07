@@ -423,8 +423,11 @@ export default function CollageEditor({
               </CaseButton>
             </div>
           </fieldset>
-          <fieldset disabled={!images || downloading || saving} className="case-export-controls">
-            <legend className="case-control-title">Скачать изображение</legend>
+          <fieldset
+            disabled={!images || downloading || saving}
+            className="case-export-controls"
+            aria-label="Скачивание изображения"
+          >
             <div className="case-export-options">
               <CaseField label="Формат">
                 <select

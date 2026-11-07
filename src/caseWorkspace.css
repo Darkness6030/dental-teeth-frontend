@@ -438,7 +438,7 @@
 .case-editor-controls {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -498,7 +498,8 @@
   cursor: pointer;
 }
 .case-export-controls {
-  padding-top: 16px;
+  border-top: 1px solid var(--case-line);
+  padding-top: 10px;
 }
 .case-editor-save {
   display: grid;
@@ -1162,7 +1163,7 @@
 .photo-color-controls {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .photo-tool-tabs {
   width: 100%;
@@ -1597,12 +1598,12 @@
 .photo-toggle-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding-top: 12px;
+  padding-top: 4px;
   gap: 10px;
 }
 .photo-toggle-controls .case-grid-switch {
-  min-height: 42px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 6px 10px;
   border: 1px solid var(--case-line);
   border-radius: 8px;
   background: #f8f9fb;
@@ -1612,7 +1613,7 @@
 }
 .photo-reset-controls {
   display: flex;
-  padding-top: 10px;
+  padding-top: 4px;
 }
 .case-workspace .case-photo-reset {
   width: 100%;
