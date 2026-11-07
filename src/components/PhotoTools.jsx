@@ -29,6 +29,7 @@ export default function PhotoTools({
       {tab === 'crop' ? (
         <>
           <CaseRange
+            sliderOnly
             label="Масштаб"
             value={edit.zoom}
             min={Math.min(minimumZoom, edit.zoom)}
@@ -51,13 +52,6 @@ export default function PhotoTools({
             >
               ↷ 90°
             </CaseButton>
-            <CaseButton
-              compact
-              aria-pressed={!!edit.flipped}
-              onClick={() => onChange('flipped', !edit.flipped)}
-            >
-              Отразить
-            </CaseButton>
           </div>
           <CaseRange
             sliderOnly
@@ -69,10 +63,20 @@ export default function PhotoTools({
             suffix="°"
             onChange={(value) => onChange('rotation', value)}
           />
-          <label className="case-switch-label case-grid-switch">
-            <span>Сетка</span>
-            <Switch label="Сетка" checked={grid} handleChange={() => onGridChange(!grid)} />
-          </label>
+          <div className="photo-toggle-controls">
+            <label className="case-switch-label case-grid-switch">
+              <span>Отразить</span>
+              <Switch
+                label="Отразить"
+                checked={!!edit.flipped}
+                handleChange={() => onChange('flipped', !edit.flipped)}
+              />
+            </label>
+            <label className="case-switch-label case-grid-switch">
+              <span>Сетка</span>
+              <Switch label="Сетка" checked={grid} handleChange={() => onGridChange(!grid)} />
+            </label>
+          </div>
         </>
       ) : (
         <div className="photo-color-controls">
