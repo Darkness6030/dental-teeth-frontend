@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CaseButton, CaseRange } from './CaseUI.jsx';
+import Switch from './Switch.jsx';
 import { normalizeAngle } from '../utils/photoGeometry';
 
 export default function PhotoTools({
@@ -68,14 +69,10 @@ export default function PhotoTools({
             suffix="°"
             onChange={(value) => onChange('rotation', value)}
           />
-          <CaseButton
-            compact
-            aria-pressed={grid}
-            onClick={() => onGridChange(!grid)}
-            className={grid ? 'is-selected' : ''}
-          >
-            Сетка
-          </CaseButton>
+          <label className="case-switch-label case-grid-switch">
+            <span>Сетка</span>
+            <Switch label="Сетка" checked={grid} handleChange={() => onGridChange(!grid)} />
+          </label>
         </>
       ) : (
         <div className="photo-color-controls">

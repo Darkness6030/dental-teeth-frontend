@@ -24,18 +24,13 @@ export default function CollageEditor({
   initialState,
   onChange,
   caseName,
-  onNameChange,
   onSave,
   saving,
   saveMessage,
-  caseId,
-  draftStatus,
   doctor,
   description,
-  onProdoctor,
   onSources,
   onBack,
-  simplified = false,
 }) {
   const initialRef = useRef(initialState);
   const previewRef = useRef(null);
@@ -55,8 +50,6 @@ export default function CollageEditor({
   }));
   const { adjustments, settings } = editor;
   const replaceEditor = history.replace;
-  const [nameTouched, setNameTouched] = useState(false);
-  const nameRef = useRef(null);
   const setAdjustments = (action, group = 'photo') =>
     setEditor((current) => {
       const next = typeof action === 'function' ? action(current.adjustments) : action;
@@ -297,12 +290,18 @@ export default function CollageEditor({
       className="case-editor"
     >
       <header className="case-section-heading">
-        <div>
+        <div className="case-editor-heading">
+          {onBack && (
+            <CaseButton variant="ghost" compact disabled={saving} onClick={onBack}>
+              ← К кейсу
+            </CaseButton>
+          )}
           <h2>Редактор коллажа</h2>
         </div>
         <div className="case-actions">
-          {onBack && <CaseButton onClick={onBack}>← К кейсу</CaseButton>}
-          <CaseButton onClick={onSources}>Исходные фото</CaseButton>
+          <CaseButton disabled={saving || downloading} onClick={onSources}>
+            Исходные фото
+          </CaseButton>
           <CaseButton
             disabled={!images}
             onClick={() => {
@@ -331,6 +330,19 @@ export default function CollageEditor({
             }}
           >
             Сбросить всё
+          </CaseButton>
+          <CaseButton
+            variant="primary"
+            disabled={!images || downloading || saving}
+            onClick={() => {
+              try {
+                onSave(collageThumbnail(cleanCanvas()));
+              } catch {
+                setError('Не удалось подготовить превью. Попробуйте ещё раз.');
+              }
+            }}
+          >
+            {saving ? 'Сохраняем…' : 'Сохранить'}
           </CaseButton>
         </div>
       </header>
@@ -457,62 +469,17 @@ export default function CollageEditor({
               {downloading ? 'Подготавливаем…' : `Скачать ${settings.format.toUpperCase()}`}
             </CaseButton>
           </fieldset>
+          {(saveMessage || error || downloadInfo) && (
+            <p
+              role={saveMessage || error ? 'alert' : 'status'}
+              className={saveMessage || error ? 'case-field-error' : 'case-status'}
+            >
+              {saveMessage || error || downloadInfo}
+            </p>
+          )}
         </aside>
       </div>
-      <fieldset disabled={!images || downloading || saving} className="case-editor-save">
-        {simplified ? (
-          <div className="editor-case-name">
-            <span className="case-label">Для сайта</span>
-            <h3>{caseName}</h3>
-          </div>
-        ) : (
-          <CaseField
-            label="Название кейса"
-            error={nameTouched && !caseName.trim() ? 'Введите название кейса.' : ''}
-          >
-            <input
-              ref={nameRef}
-              onBlur={() => setNameTouched(true)}
-              value={caseName}
-              maxLength={160}
-              onChange={(e) => onNameChange(e.target.value)}
-              placeholder="Например, реставрация 16 зуба"
-            />
-          </CaseField>
-        )}
-        <div className="case-actions">
-          {caseId && onProdoctor && !simplified && (
-            <CaseButton onClick={() => onProdoctor(caseId)}>Для ПроДокторов</CaseButton>
-          )}
-          <CaseButton
-            variant="primary"
-            disabled={!images || saving}
-            onClick={() => {
-              setNameTouched(true);
-              if (!caseName.trim()) {
-                nameRef.current.focus();
-                return;
-              }
-              try {
-                onSave(collageThumbnail(cleanCanvas()));
-              } catch {
-                setError('Не удалось подготовить превью. Попробуйте ещё раз.');
-              }
-            }}
-          >
-            {saving
-              ? 'Сохраняем…'
-              : simplified
-                ? 'Сохранить и вернуться'
-                : caseId
-                  ? 'Сохранить изменения'
-                  : 'Сохранить кейс'}
-          </CaseButton>
-        </div>
-        <p role="status" className="case-status">
-          {saveMessage || error || downloadInfo || draftStatus}
-        </p>
-      </fieldset>
+
       <dialog ref={previewRef} className="case-dialog">
         <div className="case-section-heading">
           <h2>Кейс на сайте</h2>

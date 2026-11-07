@@ -175,7 +175,7 @@ function centeredMatrix(image) {
   ];
 }
 function WebsiteWorkspace({ currentUser, seed, fresh = false, savedAt, project, onBack, onSaved }) {
-  const { workspace, setWorkspace, ready, draftStatus, markSaved } = useCollageWorkspace(
+  const { workspace, setWorkspace, ready, markSaved } = useCollageWorkspace(
     currentUser?.id,
     'website',
     { seed, fresh, savedAt },
@@ -274,7 +274,7 @@ function WebsiteWorkspace({ currentUser, seed, fresh = false, savedAt, project, 
     setError('');
     try {
       const saved = await saveCollageCase(workspace.case_id, {
-        name: workspace.name,
+        name: workspace.name.trim() || 'Коллаж До/После',
         state: workspace,
         preview,
       });
@@ -402,17 +402,13 @@ function WebsiteWorkspace({ currentUser, seed, fresh = false, savedAt, project, 
           initialState={workspace}
           onChange={changed}
           caseName={workspace.name}
-          onNameChange={(name) => setWorkspace((value) => ({ ...value, name }))}
           onSave={save}
           saving={busy}
           saveMessage={error}
-          caseId={workspace.case_id}
-          draftStatus={draftStatus}
           doctor={workspace.doctor}
           description={workspace.description}
           onSources={() => setSources(true)}
           onBack={onBack}
-          simplified
         />
       )}
     </main>

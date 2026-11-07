@@ -1582,3 +1582,15 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.case-grid-switch {
+  justify-content: space-between;
+  min-height: 32px;
+  cursor: pointer;
+}
+.case-editor-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
