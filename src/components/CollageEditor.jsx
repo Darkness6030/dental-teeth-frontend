@@ -312,7 +312,7 @@ export default function CollageEditor({
             Предпросмотр
           </CaseButton>
           <CaseButton
-            variant="ghost"
+            variant="secondary"
             disabled={!images || downloading || saving}
             onClick={() => {
               setEditor((current) => ({
@@ -397,29 +397,31 @@ export default function CollageEditor({
               grid={grid}
               onGridChange={setGrid}
             />
-            <CaseButton
-              className="case-reset-photo"
-              variant="ghost"
-              compact
-              onClick={() => {
-                setAdjustments(
-                  (v) => ({
-                    ...v,
-                    [selected]: fitCollageAdjustments(
-                      images,
-                      matrices,
-                      { before: { ...DEFAULT_ADJUSTMENT }, after: { ...DEFAULT_ADJUSTMENT } },
-                      50,
-                      true,
-                    )[selected],
-                  }),
-                  null,
-                );
-                setDownloadInfo('');
-              }}
-            >
-              Сбросить выбранное фото
-            </CaseButton>
+            <div className="photo-reset-controls">
+              <CaseButton
+                className="case-photo-reset"
+                variant="secondary"
+                compact
+                onClick={() => {
+                  setAdjustments(
+                    (v) => ({
+                      ...v,
+                      [selected]: fitCollageAdjustments(
+                        images,
+                        matrices,
+                        { before: { ...DEFAULT_ADJUSTMENT }, after: { ...DEFAULT_ADJUSTMENT } },
+                        50,
+                        true,
+                      )[selected],
+                    }),
+                    null,
+                  );
+                  setDownloadInfo('');
+                }}
+              >
+                Сбросить выбранное фото
+              </CaseButton>
+            </div>
           </fieldset>
           <fieldset disabled={!images || downloading || saving} className="case-export-controls">
             <legend className="case-control-title">Скачать изображение</legend>

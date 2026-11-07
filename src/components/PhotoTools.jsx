@@ -95,17 +95,20 @@ export default function PhotoTools({
               onChange={(value) => onChange(field, value)}
             />
           ))}
-          <CaseButton
-            compact
-            variant="ghost"
-            onClick={() => {
-              onChange('brightness', 100);
-              onChange('contrast', 100);
-              onChange('saturation', 100);
-            }}
-          >
-            Сбросить цвет
-          </CaseButton>
+          <div className="photo-reset-controls">
+            <CaseButton
+              className="case-photo-reset"
+              compact
+              variant="secondary"
+              onClick={() => {
+                onChange('brightness', 100);
+                onChange('contrast', 100);
+                onChange('saturation', 100);
+              }}
+            >
+              Сбросить цвет
+            </CaseButton>
+          </div>
         </div>
       )}
     </div>
