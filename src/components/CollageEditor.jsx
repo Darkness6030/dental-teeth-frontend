@@ -29,7 +29,6 @@ export default function CollageEditor({
   saveMessage,
   doctor,
   description,
-  onSources,
   onBack,
 }) {
   const initialRef = useRef(initialState);
@@ -299,9 +298,6 @@ export default function CollageEditor({
           <h2>Редактор коллажа</h2>
         </div>
         <div className="case-actions">
-          <CaseButton disabled={saving || downloading} onClick={onSources}>
-            Исходные фото
-          </CaseButton>
           <CaseButton
             disabled={!images}
             onClick={() => {
