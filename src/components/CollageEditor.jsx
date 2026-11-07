@@ -497,7 +497,6 @@ export default function CollageEditor({
             className="case-dialog-image"
           />
         )}
-        <h3>{caseName || 'Кейс до/после'}</h3>
         {doctor && <p className="case-hint">Врач: {doctor}</p>}
         {description && <p className="case-description">{description}</p>}
       </dialog>

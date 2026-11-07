@@ -459,7 +459,6 @@ export default function ProdoctorPage({
           <h2>Кейс для ПроДокторов</h2>
           <CaseButton onClick={() => previewRef.current.close()}>Закрыть</CaseButton>
         </div>
-        <h3>{workspace.name || 'Кейс до/после'}</h3>
         {workspace.doctor && <p className="case-hint">{workspace.doctor}</p>}
         <div className="case-dialog-gallery">
           {photos.map((photo, i) => (
