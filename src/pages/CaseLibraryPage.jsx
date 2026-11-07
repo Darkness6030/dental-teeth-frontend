@@ -83,6 +83,17 @@ export default function CaseLibraryPage({ currentUser, onCreate, onOpen, onResum
         </CaseButton>
       </header>
       <div className="library-search">
+        <svg
+          className="library-search-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          aria-hidden="true"
+        >
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4 4" />
+        </svg>
         <CaseField label="Найти кейс">
           <input
             type="search"
@@ -91,6 +102,25 @@ export default function CaseLibraryPage({ currentUser, onCreate, onOpen, onResum
             onChange={(event) => setQuery(event.target.value)}
           />
         </CaseField>
+        <div className="library-search-action">
+          {busy ? (
+            <span className="case-search-spinner" role="status">
+              <span className="sr-only">Поиск кейсов</span>
+            </span>
+          ) : query ? (
+            <button type="button" aria-label="Очистить поиск" onClick={() => setQuery('')}>
+              <svg
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                <path d="m6 6 8 8M14 6l-8 8" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </div>
       {drafts.map((draft) => (
         <div className="case-panel draft-resume" key={draft.state.mode}>
@@ -117,7 +147,7 @@ export default function CaseLibraryPage({ currentUser, onCreate, onOpen, onResum
           {!query && <CaseButton onClick={onCreate}>Создать первый кейс</CaseButton>}
         </div>
       )}
-      <div className="project-grid">
+      <div className="project-grid" aria-busy={busy}>
         {projects.map((project) => (
           <button key={project.id} className="project-card" onClick={() => onOpen(project.id)}>
             <div className="project-cover">
@@ -139,16 +169,13 @@ export default function CaseLibraryPage({ currentUser, onCreate, onOpen, onResum
                 ))}
               </div>
               <div className="project-card-meta">
-                <span>
-                  {project.photo_count} фото · {project.variants.length} оформлений
-                </span>
+                <span className="case-format-badge">{FORMAT_NAMES[project.mode]}</span>
                 <time>{caseDate(project.updated_at).toLocaleDateString('ru-RU')}</time>
               </div>
             </div>
           </button>
         ))}
       </div>
-      {busy && <p className="case-status">Загружаем кейсы…</p>}
       {more && (
         <CaseButton disabled={busy} onClick={loadMore}>
           Показать ещё

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getCaseProject, saveCaseProject } from '../api';
 import { CaseButton, CaseField, CasePanel } from '../components/CaseUI.jsx';
 import SourcePhotos from '../components/SourcePhotos.jsx';
 import { sourceThumbnail } from '../utils/sourcePhotos';
 import { DIRECTIONS, FORMAT_NAMES } from '../utils/caseWorkflow';
-import { workspaceDraft } from '../utils/workspaceDraft';
 import { caseDate } from '../utils/caseDates';
 
 const emptyProject = () => ({
@@ -18,6 +17,7 @@ const emptyProject = () => ({
 });
 function ProjectFields({ value, onChange, errors = {} }) {
   const [custom, setCustom] = useState('');
+  const [customOpen, setCustomOpen] = useState(false);
   const tagOptions = [...new Set([...DIRECTIONS, ...value.tags])];
   const toggle = (tag) =>
     onChange({
@@ -67,41 +67,54 @@ function ProjectFields({ value, onChange, errors = {} }) {
               {tag}
             </button>
           ))}
+          {!customOpen && (
+            <button
+              type="button"
+              className="case-tag tag-choice tag-custom-choice"
+              onClick={() => setCustomOpen(true)}
+            >
+              + Другое
+            </button>
+          )}
         </div>
-        <div className="tag-custom">
-          <input
-            aria-label="Другое направление"
-            placeholder="Другое направление"
-            maxLength={80}
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                if (
-                  custom.trim() &&
-                  !value.tags.includes(custom.trim()) &&
-                  value.tags.length < 20
-                ) {
-                  toggle(custom.trim());
-                  setCustom('');
+        {customOpen && (
+          <div className="tag-custom">
+            <input
+              aria-label="Другое направление"
+              placeholder="Другое направление"
+              maxLength={80}
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (
+                    custom.trim() &&
+                    !value.tags.includes(custom.trim()) &&
+                    value.tags.length < 20
+                  ) {
+                    toggle(custom.trim());
+                    setCustom('');
+                    setCustomOpen(false);
+                  }
                 }
+              }}
+            />
+            <CaseButton
+              compact
+              disabled={
+                !custom.trim() || value.tags.includes(custom.trim()) || value.tags.length >= 20
               }
-            }}
-          />
-          <CaseButton
-            compact
-            disabled={
-              !custom.trim() || value.tags.includes(custom.trim()) || value.tags.length >= 20
-            }
-            onClick={() => {
-              toggle(custom.trim());
-              setCustom('');
-            }}
-          >
-            Добавить
-          </CaseButton>
-        </div>
+              onClick={() => {
+                toggle(custom.trim());
+                setCustom('');
+                setCustomOpen(false);
+              }}
+            >
+              Добавить
+            </CaseButton>
+          </div>
+        )}
       </div>
       <CaseField label="Описание лечения">
         <textarea
@@ -129,21 +142,39 @@ function FormatChoices({ onChoose, disabled = false }) {
           key={mode}
           onClick={() => onChoose(mode)}
         >
+          <div className="format-choice-visual" aria-hidden="true">
+            <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {mode === 'website' ? (
+                <>
+                  <rect x="8" y="8" width="80" height="48" rx="8" />
+                  <path d="M48 8v48M18 44l14-15 12 13M54 44l12-15 12 13" />
+                  <circle cx="69" cy="21" r="3" />
+                </>
+              ) : (
+                <>
+                  {[8, 37, 66].map((x) => (
+                    <rect key={x} x={x} y="10" width="22" height="30" rx="4" />
+                  ))}
+                  <path d="M8 49h56M8 55h38" />
+                </>
+              )}
+            </svg>
+          </div>
           <strong>{title}</strong>
-          <span>{hint}</span>
+          <p>{hint}</p>
           <span aria-hidden="true">→</span>
         </button>
       ))}
     </div>
   );
 }
-export function NewCaseProjectPage({ onBack, onCreated }) {
+export function NewCaseProjectPage({ mode, onSelectType, onBack, onCreated }) {
   const [value, setValue] = useState(emptyProject);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
-  const create = async (mode) => {
+  const create = async () => {
     const invalid = {
       ...(!value.patient.trim() ? { patient: 'Введите ФИО пациента.' } : {}),
       ...(!value.name.trim() ? { name: 'Введите название кейса.' } : {}),
@@ -162,6 +193,7 @@ export function NewCaseProjectPage({ onBack, onCreated }) {
     try {
       const project = await saveCaseProject(null, {
         ...value,
+        mode,
         preview: await sourceThumbnail(value.photos[0]),
       });
       onCreated(project, mode);
@@ -175,116 +207,18 @@ export function NewCaseProjectPage({ onBack, onCreated }) {
       setBusy(false);
     }
   };
-  return (
-    <main className="case-main case-project-page">
-      <div className="case-page-heading">
-        <div>
-          <CaseButton variant="ghost" compact onClick={onBack}>
-            ← Все кейсы
-          </CaseButton>
-          <h1>Новый кейс</h1>
-        </div>
-      </div>
-      <fieldset disabled={busy} className="case-project-form">
-        <CasePanel>
-          <ProjectFields value={value} onChange={setValue} errors={errors} />
-        </CasePanel>
-        <SourcePhotos
-          photos={value.photos}
-          onChange={(photos) => setValue((old) => ({ ...old, photos }))}
-          disabled={busy}
-          onReadingChange={setReading}
-        />
-        <CasePanel title="Как оформить кейс">
-          <FormatChoices disabled={busy || reading} onChoose={create} />
-          {error && (
-            <p role="alert" className="case-field-error">
-              {error}
-            </p>
-          )}
-          {busy && <p className="case-status">Создаём кейс…</p>}
-        </CasePanel>
-      </fieldset>
-    </main>
-  );
-}
-export default function CaseProjectPage({ currentUser, id, onBack, onEdit, onCreateFormat }) {
-  const [project, setProject] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [reading, setReading] = useState(false);
-  const [error, setError] = useState('');
-  const [drafts, setDrafts] = useState([]);
-  const dialog = useRef(null);
-  useEffect(() => {
-    let cancelled = false;
-    getCaseProject(id)
-      .then((data) => {
-        if (!cancelled) setProject(data);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Не удалось открыть кейс.');
-      });
-    Promise.allSettled(
-      ['website', 'prodoctor'].map((mode) => workspaceDraft(currentUser?.id, mode)),
-    ).then((results) => {
-      if (!cancelled)
-        setDrafts(
-          results
-            .filter(
-              (r) =>
-                r.status === 'fulfilled' &&
-                r.value?.state.project_id === id &&
-                !r.value.state.case_id,
-            )
-            .map((r) => r.value.state),
-        );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [id, currentUser?.id]);
-  const openFormat = async (mode) => {
-    if (busy || reading) return;
-    setBusy(true);
-    try {
-      const saved = await saveCaseProject(id, {
-        ...project,
-        preview: await sourceThumbnail(project.photos[0]),
-      });
-      setProject(saved);
-      onCreateFormat(saved, mode);
-    } catch {
-      setError('Не удалось сохранить исходники. Попробуйте ещё раз.');
-    } finally {
-      setBusy(false);
-    }
-  };
-  const save = async () => {
-    if (!project.name.trim()) {
-      setError('Введите название кейса.');
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const saved = await saveCaseProject(id, {
-        ...project,
-        preview: await sourceThumbnail(project.photos[0]),
-      });
-      setProject(saved);
-      setEditing(false);
-    } catch {
-      setError('Не удалось сохранить изменения.');
-    } finally {
-      setBusy(false);
-    }
-  };
-  if (!project)
+  if (!mode)
     return (
-      <main className="case-main case-project-page">
-        <CaseButton onClick={onBack}>← Все кейсы</CaseButton>
-        <p className="case-status">{error || 'Открываем кейс…'}</p>
+      <main className="case-main case-project-page case-type-page">
+        <CaseButton variant="ghost" compact onClick={onBack}>
+          ← Все кейсы
+        </CaseButton>
+        <div className="case-type-heading">
+          <span className="case-eyebrow">Новый кейс</span>
+          <h1>Для чего создаём кейс?</h1>
+          <p>Выберите формат. Фотографии и настройки будут подготовлены для него.</p>
+        </div>
+        <FormatChoices onChoose={onSelectType} />
       </main>
     );
   return (
@@ -294,48 +228,170 @@ export default function CaseProjectPage({ currentUser, id, onBack, onEdit, onCre
           <CaseButton variant="ghost" compact onClick={onBack}>
             ← Все кейсы
           </CaseButton>
+          <h1>Новый кейс</h1>
+          <p>
+            {FORMAT_NAMES[mode]} ·{' '}
+            {mode === 'website' ? '2 фотографии До/После' : 'От 2 до 6 фотографий'}
+          </p>
+        </div>
+      </div>
+      <fieldset disabled={busy} className="case-project-form">
+        <CasePanel>
+          <ProjectFields value={value} onChange={setValue} errors={errors} />
+        </CasePanel>
+        <SourcePhotos
+          maxPhotos={mode === 'website' ? 2 : 6}
+          photos={value.photos}
+          onChange={(photos) => setValue((old) => ({ ...old, photos }))}
+          disabled={busy}
+          onReadingChange={setReading}
+        />
+        <div className="case-create-footer">
+          {error && (
+            <p role="alert" className="case-field-error">
+              {error}
+            </p>
+          )}
+          <CaseButton variant="primary" disabled={busy || reading} onClick={create}>
+            {busy ? 'Создаём кейс…' : 'Открыть редактор →'}
+          </CaseButton>
+        </div>
+      </fieldset>
+    </main>
+  );
+}
+export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) {
+  const [project, setProject] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    getCaseProject(id)
+      .then((data) => {
+        if (!cancelled) setProject(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Не удалось открыть кейс.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+  const persist = async () => {
+    if (!project.name.trim()) throw new Error('Введите название кейса.');
+    const saved = await saveCaseProject(id, {
+      ...project,
+      preview: project.variants.length ? project.preview : await sourceThumbnail(project.photos[0]),
+    });
+    setProject(saved);
+    setEditing(false);
+    return saved;
+  };
+  const save = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await persist();
+    } catch (err) {
+      setError(err.message || 'Не удалось сохранить изменения.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const open = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const value = editing ? await persist() : project;
+      if (value.variants[0]) onEdit(value, value.variants[0]);
+      else onCreateFormat(value, value.mode, true);
+    } catch (err) {
+      setError(err.message || 'Не удалось открыть редактор.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!project)
+    return (
+      <main className={`case-main case-project-page ${editing ? '' : 'case-detail'}`}>
+        <CaseButton onClick={onBack}>← Все кейсы</CaseButton>
+        <p role="status">{error || 'Открываем кейс…'}</p>
+      </main>
+    );
+  return (
+    <main className={`case-main case-project-page ${editing ? '' : 'case-detail'}`}>
+      <header className="case-page-heading">
+        <div>
+          <CaseButton variant="ghost" compact onClick={onBack}>
+            ← Все кейсы
+          </CaseButton>
           <h1>{project.patient || project.name}</h1>
           {project.patient && <p>{project.name}</p>}
         </div>
         <div className="case-actions">
-          <CaseButton disabled={busy} onClick={() => setEditing(!editing)}>
-            {editing ? 'Закрыть сведения' : 'Сведения и исходники'}
-          </CaseButton>
+          <span className="case-format-badge">{FORMAT_NAMES[project.mode]}</span>
           <CaseButton
             variant="primary"
             disabled={busy || reading || project.photos.length < 2}
-            onClick={() => dialog.current.showModal()}
+            onClick={open}
           >
-            Оформить кейс
+            {project.variants.length ? 'Редактировать' : 'Открыть редактор'}
           </CaseButton>
         </div>
-      </div>
-      {!editing && (
-        <div className="project-metadata">
-          {project.doctor && <span>{project.doctor}</span>}
-          <div className="case-tags">
-            {project.tags.map((tag) => (
-              <span key={tag} className="case-tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      </header>
+      <CasePanel
+        title="Сведения о кейсе"
+        action={
+          <CaseButton compact disabled={busy} onClick={() => setEditing(!editing)}>
+            {editing ? 'Свернуть' : 'Изменить'}
+          </CaseButton>
+        }
+      >
+        {editing ? (
+          <ProjectFields value={project} onChange={setProject} />
+        ) : (
+          <>
+            <dl className="case-facts">
+              <div>
+                <dt>Пациент</dt>
+                <dd>{project.patient || 'Не указан'}</dd>
+              </div>
+              <div>
+                <dt>Врач</dt>
+                <dd>{project.doctor || 'Не указан'}</dd>
+              </div>
+              <div>
+                <dt>Название кейса</dt>
+                <dd>{project.name}</dd>
+              </div>
+            </dl>
+            {project.tags.length > 0 && (
+              <div className="case-tags">
+                {project.tags.map((tag) => (
+                  <span key={tag} className="case-tag">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            {project.description && <p className="case-description">{project.description}</p>}
+          </>
+        )}
+      </CasePanel>
       {editing && (
         <>
-          <CasePanel>
-            <ProjectFields value={project} onChange={setProject} />
-          </CasePanel>
           <SourcePhotos
+            maxPhotos={Math.max(project.mode === 'website' ? 2 : 6, project.photos.length)}
             photos={project.photos}
             onChange={(photos) => setProject((old) => ({ ...old, photos }))}
             disabled={busy}
             onReadingChange={setReading}
           />
           <div className="case-actions">
-            <CaseButton disabled={busy || reading} onClick={save}>
-              {busy ? 'Сохраняем…' : 'Сохранить сведения и фото'}
+            <CaseButton variant="primary" disabled={busy || reading} onClick={save}>
+              {busy ? 'Сохраняем…' : 'Сохранить изменения'}
             </CaseButton>
           </div>
         </>
@@ -345,52 +401,15 @@ export default function CaseProjectPage({ currentUser, id, onBack, onEdit, onCre
           {error}
         </p>
       )}
-      {drafts.map((draft) => (
-        <div className="case-panel draft-resume" key={draft.mode}>
-          <span>Незавершённое оформление · {FORMAT_NAMES[draft.mode]}</span>
-          <CaseButton onClick={() => onCreateFormat(project, draft.mode, true)}>
-            Продолжить
-          </CaseButton>
-        </div>
-      ))}
-      <CasePanel title="Готовые оформления">
-        {!project.variants.length && (
-          <div className="library-empty">
-            <p className="case-hint">Выберите формат, чтобы оформить фотографии.</p>
-            <FormatChoices
-              disabled={busy || reading || project.photos.length < 2}
-              onChoose={openFormat}
-            />
+      {!editing && (
+        <section className="case-saved-preview">
+          <img src={project.preview || project.photos[0]?.src} alt={project.name} />
+          <div>
+            <p>{project.photos.length} фото</p>
+            <time>{caseDate(project.updated_at).toLocaleDateString('ru-RU')}</time>
           </div>
-        )}
-        <div className="case-history-grid">
-          {project.variants.map((variant) => (
-            <article className="case-history-card" key={variant.id}>
-              <img src={variant.preview} alt={variant.name} />
-              <div className="case-card-body">
-                <span className="case-tag">{FORMAT_NAMES[variant.mode]}</span>
-                <h3>{variant.name}</h3>
-                <span className="case-hint">
-                  {caseDate(variant.updated_at).toLocaleString('ru-RU')}
-                </span>
-                <CaseButton onClick={() => onEdit(project, variant)}>Открыть оформление</CaseButton>
-              </div>
-            </article>
-          ))}
-        </div>
-      </CasePanel>
-      <dialog ref={dialog} className="case-dialog">
-        <div className="case-section-heading">
-          <h2>Оформить кейс</h2>
-          <CaseButton onClick={() => dialog.current.close()}>Закрыть</CaseButton>
-        </div>
-        <FormatChoices
-          onChoose={(mode) => {
-            dialog.current.close();
-            openFormat(mode);
-          }}
-        />
-      </dialog>
+        </section>
+      )}
     </main>
   );
 }

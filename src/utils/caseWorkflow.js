@@ -12,7 +12,8 @@ export function sortSourceFiles(files) {
     a.name.localeCompare(b.name, 'ru', { numeric: true, sensitivity: 'base' }),
   );
 }
-export function projectSeed(project, mode) {
+export function projectSeed(project, mode = project.mode) {
+  if (mode !== project.mode) throw new Error('Тип кейса нельзя изменить.');
   const common = {
     mode,
     project_id: project.id,

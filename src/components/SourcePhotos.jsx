@@ -3,15 +3,21 @@ import { CaseButton, CaseRemoveButton } from './CaseUI.jsx';
 import { readSourcePhoto } from '../utils/sourcePhotos';
 import { sortSourceFiles } from '../utils/caseWorkflow';
 
-export default function SourcePhotos({ photos, onChange, disabled = false, onReadingChange }) {
+export default function SourcePhotos({
+  photos,
+  onChange,
+  disabled = false,
+  maxPhotos = 6,
+  onReadingChange,
+}) {
   const [error, setError] = useState('');
   const [reading, setReading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const input = useRef(null);
   const upload = async (files) => {
     if (disabled || reading || !files.length) return;
-    if (photos.length + files.length > 6) {
-      setError('В кейсе может быть не больше 6 фотографий.');
+    if (photos.length + files.length > maxPhotos) {
+      setError(`В этом кейсе можно загрузить до ${maxPhotos} фотографий.`);
       return;
     }
     setReading(true);
@@ -35,6 +41,7 @@ export default function SourcePhotos({ photos, onChange, disabled = false, onRea
   };
   return (
     <section
+      data-limit={maxPhotos}
       className={`case-panel source-panel ${dragging ? 'is-dragging' : ''}`}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) {
@@ -54,12 +61,15 @@ export default function SourcePhotos({ photos, onChange, disabled = false, onRea
       <div className="case-section-heading">
         <div>
           <h2>
-            Исходные фотографии <span className="case-count">{photos.length}/6</span>
+            Исходные фотографии{' '}
+            <span className="case-count">
+              {photos.length}/{maxPhotos}
+            </span>
           </h2>
           <p className="case-hint">JPG, PNG, WebP · до 16 МБ · сохраняются в кейсе</p>
         </div>
         <CaseButton
-          disabled={disabled || reading || photos.length >= 6}
+          disabled={disabled || reading || photos.length >= maxPhotos}
           onClick={() => input.current.click()}
         >
           {reading ? 'Загружаем…' : 'Добавить фото'}

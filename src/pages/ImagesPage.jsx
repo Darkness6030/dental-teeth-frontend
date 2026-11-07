@@ -19,6 +19,11 @@ export default function ImagesPage({ currentUser }) {
   const variantId = Number(params.get('variant')) || null;
   const oldCaseId = Number(params.get('case')) || null;
   useEffect(() => {
+    if (projectId && ['website', 'prodoctor'].includes(mode)) return;
+    const frame = requestAnimationFrame(() => window.scrollTo(0, 0));
+    return () => cancelAnimationFrame(frame);
+  }, [projectId, mode, params]);
+  useEffect(() => {
     if (!oldCaseId || projectId) return;
     let cancelled = false;
     getCollageCase(oldCaseId)
@@ -52,7 +57,13 @@ export default function ImagesPage({ currentUser }) {
       {params.has('legacy') ? (
         <LegacyDraft currentUser={currentUser} mode={mode} onBack={back} />
       ) : params.has('create') ? (
-        <NewCaseProjectPage onBack={back} onCreated={createFormat} />
+        <NewCaseProjectPage
+          key={mode || 'type'}
+          mode={['website', 'prodoctor'].includes(mode) ? mode : null}
+          onSelectType={(format) => setParams({ create: '1', format })}
+          onBack={back}
+          onCreated={createFormat}
+        />
       ) : projectId && ['website', 'prodoctor'].includes(mode) ? (
         <FormatWorkspace
           key={params.toString()}
@@ -96,11 +107,21 @@ function FormatWorkspace({ currentUser, projectId, mode, variantId, fresh, onBac
   useEffect(() => {
     let cancelled = false;
     Promise.all([getCaseProject(projectId), variantId ? getCollageCase(variantId) : null])
-      .then(async ([project, variant]) => {
+      .then(async ([project, requestedVariant]) => {
+        if (project.mode !== mode) throw new Error('Тип редактора не соответствует типу кейса.');
+        const variant =
+          requestedVariant ||
+          (project.variants[0] ? await getCollageCase(project.variants[0].id) : null);
         if (variant && variant.state.project_id !== project.id)
           throw new Error('Оформление относится к другому кейсу.');
         const seed = variant
-          ? { ...variant.state, name: variant.name, case_id: variant.id }
+          ? {
+              ...variant.state,
+              name: project.name,
+              doctor: project.doctor,
+              description: project.description,
+              case_id: variant.id,
+            }
           : projectSeed(project, mode);
         if (mode === 'website' && !variant) {
           // Keep full originals in the case; website's existing limit is 15 MB.
@@ -138,7 +159,7 @@ function FormatWorkspace({ currentUser, projectId, mode, variantId, fresh, onBac
   const props = {
     currentUser,
     seed: data.seed,
-    fresh,
+    fresh: fresh && !data.savedAt,
     savedAt: data.savedAt,
     project: data.project,
     onBack,

@@ -11,17 +11,19 @@ test('source chronology uses numeric filenames and never AI ordering', () => {
   );
   assert.equal(files[0].name, 'кадр10.jpg');
 });
-test('one patient case seeds independent fixed-format variants from shared originals', () => {
+test('a case seeds only its chosen format and keeps originals unchanged', () => {
   const project = {
     id: 5,
+    mode: 'website',
     name: 'Лечение',
     doctor: 'Врач',
     description: '🦷 '.repeat(501),
     photos: [{ src: 'one' }, { src: 'two' }, { src: 'three' }],
   };
   const website = projectSeed(project, 'website'),
-    pro = projectSeed(project, 'prodoctor');
-  assert.equal(website.project_id, pro.project_id);
+    pro = projectSeed({ ...project, id: 6, mode: 'prodoctor' });
+  assert.throws(() => projectSeed(project, 'prodoctor'));
+  assert.notEqual(website.project_id, pro.project_id);
   assert.equal(website.before, 'one');
   assert.equal(website.after, 'three');
   assert.deepEqual(
