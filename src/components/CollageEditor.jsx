@@ -14,14 +14,8 @@ import {
 } from '../utils/collageCanvas';
 
 import useUndoState from '../hooks/useUndoState';
+import PhotoTools from './PhotoTools.jsx';
 
-const SLIDERS = [
-  ['zoom', 'Масштаб', 50, 200, 1, '%'],
-  ['rotation', 'Наклон', -30, 30, 0.5, '°'],
-  ['x', 'Сдвиг влево / вправо', -50, 50, 0.5, '%'],
-  ['y', 'Сдвиг вверх / вниз', -50, 50, 0.5, '%'],
-  ['brightness', 'Яркость', 50, 150, 1, '%'],
-];
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export default function CollageEditor({
@@ -40,6 +34,8 @@ export default function CollageEditor({
   description,
   onProdoctor,
   onSources,
+  onBack,
+  simplified = false,
 }) {
   const initialRef = useRef(initialState);
   const previewRef = useRef(null);
@@ -49,6 +45,7 @@ export default function CollageEditor({
   const dragRef = useRef(null);
   const [images, setImages] = useState(null);
   const [selected, setSelected] = useState('before');
+  const [grid, setGrid] = useState(true);
   const [editor, setEditor, history] = useUndoState(() => ({
     adjustments: initialRef.current?.adjustments || {
       before: { ...DEFAULT_ADJUSTMENT },
@@ -122,8 +119,8 @@ export default function CollageEditor({
 
   useEffect(() => {
     if (images && canvasRef.current)
-      drawCollage(canvasRef.current, images, matrices, adjustments, settings, true, selected);
-  }, [images, matrices, adjustments, settings, selected]);
+      drawCollage(canvasRef.current, images, matrices, adjustments, settings, true, selected, grid);
+  }, [images, matrices, adjustments, settings, selected, grid]);
 
   useEffect(() => {
     if (!images) return;
@@ -165,11 +162,6 @@ export default function CollageEditor({
     );
     setDownloadInfo('');
   };
-
-  const sliderValue = (field) =>
-    field === 'rotation'
-      ? photoRotation(matrices[selected], adjustments[selected].rotation)
-      : adjustments[selected][field];
 
   const updateSplit = (split) => {
     setSettings((value) => ({ ...value, split }), 'split');
@@ -309,6 +301,7 @@ export default function CollageEditor({
           <h2>Редактор коллажа</h2>
         </div>
         <div className="case-actions">
+          {onBack && <CaseButton onClick={onBack}>← К кейсу</CaseButton>}
           <CaseButton onClick={onSources}>Исходные фото</CaseButton>
           <CaseButton
             disabled={!images}
@@ -386,30 +379,15 @@ export default function CollageEditor({
                 </button>
               ))}
             </div>
-            <div className="case-sliders">
-              {SLIDERS.map(([field, label, min, max, step, suffix]) => (
-                <CaseRange
-                  key={field}
-                  label={field === 'x' ? 'По горизонтали' : field === 'y' ? 'По вертикали' : label}
-                  ariaLabel={`${label}: ${selected === 'before' ? 'до' : 'после'}`}
-                  value={sliderValue(field)}
-                  min={Math.min(min, Math.floor(sliderValue(field)))}
-                  max={Math.max(max, Math.ceil(sliderValue(field)))}
-                  step={step}
-                  suffix={suffix}
-                  onChange={(value) => updatePhoto(selected, field, value)}
-                />
-              ))}
-              <CaseRange
-                label="Разделитель"
-                ariaLabel="Положение разделителя"
-                value={settings.split}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={updateSplit}
-              />
-            </div>
+            <PhotoTools
+              edit={{
+                ...adjustments[selected],
+                rotation: photoRotation(matrices[selected], adjustments[selected].rotation),
+              }}
+              onChange={(field, value) => updatePhoto(selected, field, value)}
+              grid={grid}
+              onGridChange={setGrid}
+            />
             <CaseButton
               className="case-reset-photo"
               variant="ghost"
@@ -484,21 +462,30 @@ export default function CollageEditor({
         </aside>
       </div>
       <fieldset disabled={!images || downloading || saving} className="case-editor-save">
-        <CaseField
-          label="Название кейса"
-          error={nameTouched && !caseName.trim() ? 'Введите название кейса.' : ''}
-        >
-          <input
-            ref={nameRef}
-            onBlur={() => setNameTouched(true)}
-            value={caseName}
-            maxLength={160}
-            onChange={(e) => onNameChange(e.target.value)}
-            placeholder="Например, реставрация 16 зуба"
-          />
-        </CaseField>
+        {simplified ? (
+          <div className="editor-case-name">
+            <span className="case-label">Для сайта</span>
+            <h3>{caseName}</h3>
+          </div>
+        ) : (
+          <CaseField
+            label="Название кейса"
+            error={nameTouched && !caseName.trim() ? 'Введите название кейса.' : ''}
+          >
+            <input
+              ref={nameRef}
+              onBlur={() => setNameTouched(true)}
+              value={caseName}
+              maxLength={160}
+              onChange={(e) => onNameChange(e.target.value)}
+              placeholder="Например, реставрация 16 зуба"
+            />
+          </CaseField>
+        )}
         <div className="case-actions">
-          {caseId && <CaseButton onClick={() => onProdoctor(caseId)}>Для ПроДокторов</CaseButton>}
+          {caseId && onProdoctor && !simplified && (
+            <CaseButton onClick={() => onProdoctor(caseId)}>Для ПроДокторов</CaseButton>
+          )}
           <CaseButton
             variant="primary"
             disabled={!images || saving}
@@ -515,7 +502,13 @@ export default function CollageEditor({
               }
             }}
           >
-            {saving ? 'Сохраняем…' : caseId ? 'Сохранить изменения' : 'Сохранить кейс'}
+            {saving
+              ? 'Сохраняем…'
+              : simplified
+                ? 'Сохранить и вернуться'
+                : caseId
+                  ? 'Сохранить изменения'
+                  : 'Сохранить кейс'}
           </CaseButton>
         </div>
         <p role="status" className="case-status">

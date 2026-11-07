@@ -1,4 +1,5 @@
 import fontUrl from '../assets/InterRegular.ttf';
+import { photoFilter, drawCropGrid } from './photoGeometry';
 
 export const DEFAULT_ADJUSTMENT = { zoom: 100, x: 0, y: 0, rotation: 0, brightness: 100 };
 export const DEFAULT_EXPORT = { width: 1388, height: 1112, format: 'webp', quality: 92, split: 50 };
@@ -88,6 +89,7 @@ export function fitPhotoAdjustment(photo, matrix, edit, split, key, fullFrame = 
   const dx = clamp(0, margin - x1, width - margin - x2);
   const dy = clamp(0, margin - y1, height - margin - y2);
   return {
+    ...edit,
     zoom: zoom * 100,
     x: (offsetX - zoom * (a * dx + c * dy)) / 13,
     y: (offsetY - zoom * (b * dx + d * dy)) / 9.56,
@@ -154,7 +156,11 @@ function drawPhoto(ctx, frame, photo, matrix, edit) {
   );
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.filter = `brightness(${edit.brightness}%)`;
+  ctx.filter = photoFilter(edit);
+  if (edit.flipped) {
+    ctx.translate(photo.naturalWidth || photo.width, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(photo, 0, 0);
   ctx.restore();
 }
@@ -168,6 +174,7 @@ export function drawCollage(
   settings,
   preview = false,
   selected = null,
+  grid = false,
 ) {
   settings = normalizeExportSettings(settings);
   const ratio = preview ? Math.min(1, 1600 / Math.max(settings.width, settings.height)) : 1;
@@ -230,6 +237,13 @@ export function drawCollage(
     }
   }
 
+  if (preview && grid) {
+    ctx.save();
+    roundedRect(ctx, frame.x, frame.y, frame.width, frame.height, 100 * scale);
+    ctx.clip();
+    drawCropGrid(ctx, frame.x, frame.y, frame.width, frame.height);
+    ctx.restore();
+  }
   ctx.font = `${50 * scale}px CollageInter, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

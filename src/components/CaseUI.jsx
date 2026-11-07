@@ -87,6 +87,7 @@ export function CaseRange({
   step = 1,
   suffix = '',
   ariaLabel = label,
+  numberOnly = false,
 }) {
   const id = useId();
   const [input, setInput] = useState(String(Math.round(value * 10) / 10));
@@ -95,9 +96,9 @@ export function CaseRange({
     setInput(String(Math.round(value * 10) / 10));
   }, [value]);
   return (
-    <div className="case-range">
+    <div className={`case-range ${numberOnly ? 'case-number-only' : ''}`}>
       <div className="case-range-heading">
-        <label htmlFor={`${id}-range`}>{label}</label>
+        <label htmlFor={`${id}-${numberOnly ? 'number' : 'range'}`}>{label}</label>
         <span className="case-range-number">
           <input
             id={`${id}-number`}
@@ -133,16 +134,18 @@ export function CaseRange({
           {suffix && <span aria-hidden="true">{suffix}</span>}
         </span>
       </div>
-      <input
-        id={`${id}-range`}
-        aria-label={ariaLabel}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
+      {!numberOnly && (
+        <input
+          id={`${id}-range`}
+          aria-label={ariaLabel}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+      )}
     </div>
   );
 }

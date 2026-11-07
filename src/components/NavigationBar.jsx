@@ -28,7 +28,7 @@ function NavigationBar({ currentUser, onLogout }) {
               {currentUser.name}
             </div>
             <button
-              onClick={() => navigate(location.pathname === '/images' ? '/' : '/images')}
+              onClick={() => navigate(location.pathname === '/images' ? '/markup' : '/images')}
               className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
             >
               {location.pathname === '/images' ? 'Разметка зубов' : 'Коллажи'}

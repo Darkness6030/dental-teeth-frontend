@@ -1,15 +1,8 @@
-import {
-  CaseButton,
-  CaseRange,
-  CaseField,
-  CasePanel,
-  CaseRemoveButton,
-  CasePageHeading,
-} from '../components/CaseUI.jsx';
+import { CaseButton, CaseField, CasePanel, CaseRemoveButton } from '../components/CaseUI.jsx';
 import { useEffect, useRef, useState } from 'react';
-import { getCollageCase, listCollageCases, saveCollageCase } from '../api';
-import useCollageWorkspace, { emptyProdoctorWorkspace } from '../hooks/useCollageWorkspace';
-import { caseDate } from '../utils/caseDates';
+import { saveCollageCase } from '../api';
+import useCollageWorkspace from '../hooks/useCollageWorkspace';
+import CasePhotoEditor from '../components/CasePhotoEditor.jsx';
 import {
   adaptDescription,
   downloadCasePhoto,
@@ -18,6 +11,7 @@ import {
   textLength,
   downloadAllCasePhotos,
 } from '../utils/prodoctor';
+import { sortSourceFiles } from '../utils/caseWorkflow';
 import { validateProdoctor } from '../utils/prodoctorValidation';
 
 function PhotoPreview({ photo, className = '' }) {
@@ -38,7 +32,13 @@ function PhotoPreview({ photo, className = '' }) {
   return src ? (
     <img
       src={src}
-      alt={photo.stage === 'before' ? 'До процедуры' : 'Сразу после процедуры'}
+      alt={
+        photo.stage === 'before'
+          ? 'До лечения'
+          : photo.stage === 'during'
+            ? 'Во время лечения'
+            : 'После лечения'
+      }
       className={`aspect-square object-cover rounded-xl ${className}`}
     />
   ) : (
@@ -49,16 +49,21 @@ function PhotoPreview({ photo, className = '' }) {
   );
 }
 
-export default function ProdoctorPage({ currentUser, sourceId }) {
-  const { workspace, setWorkspace, ready, draftStatus, replaceWorkspace } = useCollageWorkspace(
+export default function ProdoctorPage({
+  currentUser,
+  seed = null,
+  fresh = false,
+  savedAt = null,
+  onBack,
+  onSaved,
+}) {
+  const { workspace, setWorkspace, ready, draftStatus, markSaved } = useCollageWorkspace(
     currentUser?.id,
     'prodoctor',
+    { seed, fresh, savedAt },
   );
-  const [history, setHistory] = useState([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [historyError, setHistoryError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [linking, setLinking] = useState(Boolean(sourceId));
+  const [editingPhoto, setEditingPhoto] = useState(null);
   const [message, setMessage] = useState('');
   const [dragging, setDragging] = useState(false);
   const previewRef = useRef(null);
@@ -68,90 +73,12 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
   const [photoError, setPhotoError] = useState('');
   const [textWarning, setTextWarning] = useState('');
   const touch = (key) => setTouched((value) => ({ ...value, [key]: true }));
-  const seeded = useRef(false);
   const photos = workspace.photos || [];
   const services = workspace.services || [];
-  const locked = !ready || busy || linking;
+  const locked = !ready || busy;
   const errors = validateProdoctor(workspace);
   const invalid = Object.values(errors)[0];
   const fieldError = (key) => (showErrors || touched[key] ? errors[key] : '');
-
-  useEffect(() => {
-    let cancelled = false;
-    listCollageCases(0, 'prodoctor')
-      .then((rows) => {
-        if (!cancelled) {
-          setHistory(rows);
-          setHasMore(rows.length === 24);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setHistoryError('Не удалось загрузить историю.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !sourceId) return;
-    // Reopening the linked format must keep its restored, unfinished edits.
-    if (workspace.source_case_id === sourceId) {
-      seeded.current = true;
-      setLinking(false);
-      return;
-    }
-    if (seeded.current) return;
-    seeded.current = true;
-    let cancelled = false;
-    Promise.all([getCollageCase(sourceId), listCollageCases(0, 'prodoctor', sourceId)])
-      .then(([source, variants]) =>
-        variants.length
-          ? getCollageCase(variants[0].id)
-          : Promise.resolve({
-              state: {
-                ...emptyProdoctorWorkspace(),
-                source_case_id: source.id,
-                name: source.name,
-                doctor: source.state.doctor || '',
-                description: source.state.description || '',
-                text: adaptDescription(source.state.description || ''),
-                photos: [source.state.before, source.state.after].filter(Boolean).map((src, i) => ({
-                  src,
-                  stage: i ? 'after' : 'before',
-                  zoom: 100,
-                  x: 50,
-                  y: 50,
-                })),
-              },
-            }),
-      )
-      .then(async (saved) => {
-        const converted = await Promise.all(
-          saved.state.photos.map(async (photo) => {
-            if (/^data:image\/(jpeg|png);base64,/.test(photo.src)) return photo;
-            const canvas = await renderCasePhoto(photo);
-            return { ...photo, src: canvas.toDataURL('image/jpeg', 0.94), zoom: 100, x: 50, y: 50 };
-          }),
-        );
-        saved = { ...saved, state: { ...saved.state, photos: converted } };
-        if (!cancelled)
-          replaceWorkspace({
-            ...saved.state,
-            ...(saved.id ? { case_id: saved.id, name: saved.name } : {}),
-          });
-      })
-      .catch(() => {
-        if (!cancelled)
-          setMessage('Не удалось загрузить основной кейс. Повторите открытие из истории.');
-      })
-      .finally(() => {
-        if (!cancelled) setLinking(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, sourceId, replaceWorkspace, workspace.source_case_id]);
 
   const update = (patch, group = null) => {
     setWorkspace((value) => ({ ...value, ...patch }), group);
@@ -172,13 +99,14 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
     setMessage('');
     setPhotoError('');
     try {
-      const loaded = await Promise.all(Array.from(files).map(readCasePhoto));
+      const loaded = await Promise.all(sortSourceFiles(files).map(readCasePhoto));
       update({
         photos: [
           ...photos,
           ...loaded.map((photo, i) => ({
             ...photo,
-            stage: photos.length + i ? 'after' : 'before',
+            stage:
+              !photos.length && i === 0 ? 'before' : i === loaded.length - 1 ? 'after' : 'during',
           })),
         ],
       });
@@ -212,8 +140,8 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
         state: workspace,
         preview: canvas.toDataURL('image/jpeg', 0.8),
       });
-      replaceWorkspace((value) => ({ ...value, case_id: saved.id, name: saved.name }));
-      setHistory((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
+      await markSaved(saved);
+      onSaved?.(saved);
       setMessage('Кейс сохранён.');
     } catch (error) {
       setMessage(
@@ -221,19 +149,6 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
           ? error.response.data.detail
           : 'Не удалось сохранить кейс. Попробуйте ещё раз.',
       );
-    } finally {
-      setBusy(false);
-    }
-  };
-  const open = async (id) => {
-    setBusy(true);
-    try {
-      const saved = await getCollageCase(id);
-      replaceWorkspace({ ...saved.state, case_id: saved.id, name: saved.name });
-      setShowErrors(false);
-      setTouched({});
-    } catch {
-      setMessage('Не удалось открыть кейс.');
     } finally {
       setBusy(false);
     }
@@ -261,47 +176,25 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
       setBusy(false);
     }
   };
-  const more = async () => {
-    setBusy(true);
-    try {
-      const rows = await listCollageCases(historyError ? 0 : history.length, 'prodoctor');
-      setHistory((old) => (historyError ? rows : [...old, ...rows]));
-      setHasMore(rows.length === 24);
-      setHistoryError('');
-    } catch {
-      setHistoryError('Не удалось загрузить историю.');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <main className="case-main case-pro-main">
-      <CasePageHeading
-        title="Кейс для ПроДокторов"
-        disabled={locked}
-        onNew={() => {
-          update(emptyProdoctorWorkspace());
-          setShowErrors(false);
-          setTouched({});
-          setPhotoError('');
-          setTextWarning('');
-        }}
-      />
+      <header className="case-page-heading">
+        <div>
+          <CaseButton variant="ghost" compact onClick={onBack}>
+            ← К кейсу
+          </CaseButton>
+          <h1>Для ПроДокторов</h1>
+          <p>{workspace.name}</p>
+        </div>
+      </header>
       <fieldset ref={formRef} disabled={locked} className="case-pro-form">
         <legend className="sr-only">Оформление кейса</legend>
-        <CasePanel className="case-name-panel">
+        {!workspace.project_id && (
           <CaseField label="Название кейса" error={fieldError('name')}>
-            <input
-              aria-required="true"
-              onBlur={() => touch('name')}
-              value={workspace.name}
-              maxLength={160}
-              onChange={(e) => update({ name: e.target.value }, 'name')}
-              placeholder="Например, лечение кариеса 16 зуба"
-            />
+            <input value={workspace.name} onChange={(e) => update({ name: e.target.value })} />
           </CaseField>
-        </CasePanel>
+        )}
         <section
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes('Files')) {
@@ -401,30 +294,17 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
                     onChange={(e) => editPhoto(index, { stage: e.target.value })}
                   >
                     <option value="before">До процедуры</option>
-                    <option value="after">Сразу после процедуры</option>
+                    <option value="during">Во время лечения</option>
+                    <option value="after">После лечения</option>
                   </select>
                 </CaseField>
-                <details className="case-details">
-                  <summary>Кадрирование</summary>
-                  <div className="case-crop-sliders">
-                    {[
-                      ['zoom', 'Масштаб', 100, 300],
-                      ['x', 'По горизонтали', 0, 100],
-                      ['y', 'По вертикали', 0, 100],
-                    ].map(([key, label, min, max]) => (
-                      <CaseRange
-                        key={key}
-                        label={label}
-                        ariaLabel={`${label} фото ${index + 1}`}
-                        min={min}
-                        max={max}
-                        value={photo[key]}
-                        suffix="%"
-                        onChange={(value) => editPhoto(index, { [key]: value })}
-                      />
-                    ))}
-                  </div>
-                </details>
+                <CaseButton
+                  className="case-photo-edit"
+                  compact
+                  onClick={() => setEditingPhoto(index)}
+                >
+                  Кадрировать и настроить
+                </CaseButton>
                 <CaseButton className="case-full" onClick={() => download(photo, index)}>
                   Скачать JPG
                 </CaseButton>
@@ -461,7 +341,7 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
                 <CaseButton
                   onClick={() => update({ text: adaptDescription(workspace.description) })}
                 >
-                  Взять с сайта
+                  Из описания кейса
                 </CaseButton>
               </div>
             )}
@@ -555,41 +435,25 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
               Предпросмотр
             </CaseButton>
             <CaseButton variant="primary" disabled={locked} onClick={save}>
-              {busy ? 'Сохраняем…' : workspace.case_id ? 'Сохранить изменения' : 'Сохранить кейс'}
+              {busy
+                ? 'Сохраняем…'
+                : workspace.case_id
+                  ? 'Сохранить и вернуться'
+                  : 'Сохранить и вернуться'}
             </CaseButton>
           </div>
         </div>
       </fieldset>
-      {linking && (
-        <p role="status" className="case-status">
-          Открываем вариант кейса…
-        </p>
+      {editingPhoto !== null && photos[editingPhoto] && (
+        <CasePhotoEditor
+          photo={photos[editingPhoto]}
+          onClose={() => setEditingPhoto(null)}
+          onApply={(photo) => {
+            editPhoto(editingPhoto, photo);
+            setEditingPhoto(null);
+          }}
+        />
       )}
-      <CasePanel title="Сохранённые кейсы" className="case-history">
-        {!history.length && (
-          <p className="case-empty">Здесь появятся ваши сохранённые кейсы ПроДокторов.</p>
-        )}
-        <div className="case-history-grid">
-          {history.map((item) => (
-            <article key={item.id} className="case-history-card">
-              <img src={item.preview} alt={item.name} />
-              <div className="case-card-body">
-                <h3>{item.name}</h3>
-                <p className="case-hint">{caseDate(item.updated_at).toLocaleString('ru-RU')}</p>
-                <CaseButton disabled={locked} onClick={() => open(item.id)}>
-                  Открыть кейс
-                </CaseButton>
-              </div>
-            </article>
-          ))}
-        </div>
-        {historyError && <p className="case-status is-error">{historyError}</p>}
-        {(hasMore || historyError) && (
-          <CaseButton disabled={locked} onClick={more}>
-            {historyError ? 'Повторить' : 'Показать ещё'}
-          </CaseButton>
-        )}
-      </CasePanel>
       <dialog ref={previewRef} className="case-dialog">
         <div className="case-section-heading">
           <h2>Кейс для ПроДокторов</h2>
@@ -602,7 +466,11 @@ export default function ProdoctorPage({ currentUser, sourceId }) {
             <figure key={i}>
               <PhotoPreview photo={photo} className="case-photo-preview" />
               <figcaption className="case-hint">
-                {photo.stage === 'before' ? 'До процедуры' : 'Сразу после процедуры'}
+                {photo.stage === 'before'
+                  ? 'До лечения'
+                  : photo.stage === 'during'
+                    ? 'Во время лечения'
+                    : 'После лечения'}
               </figcaption>
             </figure>
           ))}

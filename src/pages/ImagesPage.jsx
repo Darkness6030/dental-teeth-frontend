@@ -1,126 +1,172 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import CaseLibraryPage from './CaseLibraryPage.jsx';
+import CaseProjectPage, { NewCaseProjectPage } from './CaseProjectPage.jsx';
 import ProdoctorPage from './ProdoctorPage.jsx';
-import { caseDate } from '../utils/caseDates';
-import { prepareCollage, listCollageCases, getCollageCase, saveCollageCase } from '../api';
-import useCollageWorkspace, { emptyWorkspace } from '../hooks/useCollageWorkspace';
-import {
-  DEFAULT_ADJUSTMENT,
-  loadImage,
-  loadCollageFont,
-  exportCollage,
-  downloadBlob,
-} from '../utils/collageCanvas';
-import { CaseButton, CaseField, CasePanel, CasePageHeading } from '../components/CaseUI.jsx';
-import '../caseWorkspace.css';
-import Switch from '../components/Switch.jsx';
 import CollageEditor from '../components/CollageEditor.jsx';
-
-const MAX_SIZE = 15 * 1024 * 1024;
-
-function readPhoto(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Не удалось прочитать файл.'));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () =>
-        reject(new Error('Не удалось открыть фото. Используйте JPG, PNG или WebP.'));
-      image.onload = () => {
-        if (image.naturalWidth * image.naturalHeight > 24000000) {
-          reject(new Error('Разрешение фото не должно превышать 24 мегапикселя.'));
-        } else {
-          resolve({ src: reader.result });
-        }
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+import { CaseButton, CaseField, CasePanel } from '../components/CaseUI.jsx';
+import { getCaseProject, getCollageCase, saveCollageCase } from '../api';
+import useCollageWorkspace from '../hooks/useCollageWorkspace';
+import { projectSeed, FORMAT_NAMES } from '../utils/caseWorkflow';
+import { loadImage, DEFAULT_ADJUSTMENT } from '../utils/collageCanvas';
+import { readSourcePhoto, jpegSource } from '../utils/sourcePhotos';
+import '../caseWorkspace.css';
 
 export default function ImagesPage({ currentUser }) {
   const [params, setParams] = useSearchParams();
-  const [activeCaseId, setActiveCaseId] = useState(null);
-  const mode = params.get('format') === 'prodoctor' ? 'prodoctor' : 'website';
-  const openProdoctor = (id) => setParams({ format: 'prodoctor', case: String(id) });
+  const projectId = Number(params.get('project')) || null;
+  const mode = params.get('format');
+  const variantId = Number(params.get('variant')) || null;
+  const oldCaseId = Number(params.get('case')) || null;
+  useEffect(() => {
+    if (!oldCaseId || projectId) return;
+    let cancelled = false;
+    getCollageCase(oldCaseId)
+      .then((variant) => {
+        if (!cancelled && variant.state.project_id)
+          setParams({ project: String(variant.state.project_id) }, { replace: true });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [oldCaseId, projectId, setParams]);
+  const back = () => {
+    setParams({});
+    window.scrollTo(0, 0);
+  };
+  const openProject = (id) => {
+    setParams({ project: String(id) });
+    window.scrollTo(0, 0);
+  };
+  const createFormat = (project, format, resume = false) => {
+    setParams({ project: String(project.id), format, ...(resume ? { draft: '1' } : { new: '1' }) });
+    window.scrollTo(0, 0);
+  };
+  const openVariant = (project, variant) => {
+    setParams({ project: String(project.id), format: variant.mode, variant: String(variant.id) });
+    window.scrollTo(0, 0);
+  };
   return (
     <div className="case-workspace">
-      <div className="case-format-bar">
-        <div className="case-segmented" role="group" aria-label="Формат кейса">
-          {[
-            ['website', 'Для сайта'],
-            ['prodoctor', 'Для ПроДокторов'],
-          ].map(([value, title]) => (
-            <button
-              key={value}
-              aria-pressed={mode === value}
-              onClick={() =>
-                setParams(
-                  value === 'website'
-                    ? {}
-                    : { format: value, ...(activeCaseId ? { case: String(activeCaseId) } : {}) },
-                )
-              }
-            >
-              {title}
-            </button>
-          ))}
-        </div>
-      </div>
-      {mode === 'website' ? (
-        <WebsiteImagesPage
+      {params.has('legacy') ? (
+        <LegacyDraft currentUser={currentUser} mode={mode} onBack={back} />
+      ) : params.has('create') ? (
+        <NewCaseProjectPage onBack={back} onCreated={createFormat} />
+      ) : projectId && ['website', 'prodoctor'].includes(mode) ? (
+        <FormatWorkspace
+          key={params.toString()}
           currentUser={currentUser}
-          onProdoctor={openProdoctor}
-          onActiveCase={setActiveCaseId}
+          projectId={projectId}
+          mode={mode}
+          variantId={variantId}
+          fresh={params.has('new')}
+          onBack={() => openProject(projectId)}
+        />
+      ) : projectId ? (
+        <CaseProjectPage
+          currentUser={currentUser}
+          key={projectId}
+          id={projectId}
+          onBack={back}
+          onEdit={openVariant}
+          onCreateFormat={createFormat}
         />
       ) : (
-        <ProdoctorPage
-          key={params.get('case') || 'new'}
+        <CaseLibraryPage
           currentUser={currentUser}
-          sourceId={Number(params.get('case')) || null}
+          onCreate={() => setParams({ create: '1' })}
+          onOpen={openProject}
+          onResume={(state) => setParams({ format: state.mode, draft: '1', legacy: '1' })}
         />
       )}
     </div>
   );
 }
-
-function WebsiteImagesPage({ currentUser, onProdoctor, onActiveCase }) {
-  const { workspace, setWorkspace, ready, draftStatus, replaceWorkspace } = useCollageWorkspace(
-    currentUser?.id,
+function LegacyDraft({ currentUser, mode, onBack }) {
+  return mode === 'prodoctor' ? (
+    <ProdoctorPage currentUser={currentUser} onBack={onBack} onSaved={onBack} />
+  ) : (
+    <WebsiteWorkspace currentUser={currentUser} onBack={onBack} onSaved={onBack} />
   );
-  const firstScreenRef = useRef(null);
-  const [navigationHeight, setNavigationHeight] = useState(64);
-  useLayoutEffect(() => {
-    const screen = firstScreenRef.current;
-    const navigation = screen.closest('.case-workspace').parentElement.previousElementSibling;
-    const measure = () => setNavigationHeight(screen.getBoundingClientRect().top + window.scrollY);
-    measure();
-    const observer = new ResizeObserver(measure);
-    if (navigation) observer.observe(navigation);
-    window.addEventListener('resize', measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, []);
+}
+function FormatWorkspace({ currentUser, projectId, mode, variantId, fresh, onBack }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
   useEffect(() => {
-    onActiveCase(workspace.case_id || null);
-  }, [workspace.case_id, onActiveCase]);
+    let cancelled = false;
+    Promise.all([getCaseProject(projectId), variantId ? getCollageCase(variantId) : null])
+      .then(async ([project, variant]) => {
+        if (variant && variant.state.project_id !== project.id)
+          throw new Error('Оформление относится к другому кейсу.');
+        const seed = variant
+          ? { ...variant.state, name: variant.name, case_id: variant.id }
+          : projectSeed(project, mode);
+        if (mode === 'website' && !variant) {
+          // Keep full originals in the case; website's existing limit is 15 MB.
+          for (const key of ['before', 'after']) {
+            const src = seed[key];
+            if (src && ((src.length - src.indexOf(',') - 1) * 3) / 4 > 15 * 1024 * 1024)
+              seed[key] = await jpegSource(src, 15 * 1024 * 1024);
+          }
+        }
+        if (mode === 'prodoctor')
+          seed.photos = await Promise.all(
+            seed.photos.map(async (photo) => {
+              if (/^data:image\/(jpeg|png);base64,/.test(photo.src)) return photo;
+              return { ...photo, src: await jpegSource(photo.src) };
+            }),
+          );
+        if (!cancelled) setData({ project, seed, savedAt: variant?.updated_at });
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Не удалось открыть оформление.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, mode, variantId]);
+  if (!data)
+    return (
+      <main className="case-main case-project-page">
+        <CaseButton onClick={onBack}>← К кейсу</CaseButton>
+        <p role={error ? 'alert' : 'status'} className="case-status">
+          {error || 'Открываем фотографии…'}
+        </p>
+      </main>
+    );
+  const props = {
+    currentUser,
+    seed: data.seed,
+    fresh,
+    savedAt: data.savedAt,
+    project: data.project,
+    onBack,
+    onSaved: onBack,
+  };
+  return mode === 'website' ? <WebsiteWorkspace {...props} /> : <ProdoctorPage {...props} />;
+}
+function centeredMatrix(image) {
+  const scale = Math.max(1300 / image.naturalWidth, 956 / image.naturalHeight);
+  return [
+    [scale, 0, (1300 - image.naturalWidth * scale) / 2],
+    [0, scale, (956 - image.naturalHeight * scale) / 2],
+  ];
+}
+function WebsiteWorkspace({ currentUser, seed, fresh = false, savedAt, project, onBack, onSaved }) {
+  const { workspace, setWorkspace, ready, draftStatus, markSaved } = useCollageWorkspace(
+    currentUser?.id,
+    'website',
+    { seed, fresh, savedAt },
+  );
+  const [sources, setSources] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [photoErrors, setPhotoErrors] = useState({});
-  const [busy, setBusy] = useState(false);
-  const [reading, setReading] = useState(false);
-  const [dragTarget, setDragTarget] = useState(null);
-  const [cases, setCases] = useState([]);
-  const [historyError, setHistoryError] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [caseBusy, setCaseBusy] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [editorSession, setEditorSession] = useState(0);
-  const [freshEditor, setFreshEditor] = useState(false);
+  const [session, setSession] = useState(0);
+  const [preparing, setPreparing] = useState(false);
+  const first = useRef(null);
+  const attempted = useRef(null);
   const photos = useMemo(
     () => ({
       before: workspace.before ? { src: workspace.before } : null,
@@ -128,31 +174,49 @@ function WebsiteImagesPage({ currentUser, onProdoctor, onActiveCase }) {
     }),
     [workspace.before, workspace.after],
   );
-  const result = workspace.matrices;
-  const autoAlign = workspace.auto_align;
-  const locked = busy || reading || saving || caseBusy || !ready;
-
+  const build = useCallback(async () => {
+    if (!workspace.before || !workspace.after) return;
+    setPreparing(true);
+    setError('');
+    try {
+      const [beforeSrc, afterSrc] = await Promise.all(
+        [workspace.before, workspace.after].map((src) =>
+          ((src.length - src.indexOf(',') - 1) * 3) / 4 > 15 * 1024 * 1024
+            ? jpegSource(src, 15 * 1024 * 1024)
+            : src,
+        ),
+      );
+      const [before, after] = await Promise.all([loadImage(beforeSrc), loadImage(afterSrc)]);
+      setWorkspace((value) => ({
+        ...value,
+        before: beforeSrc,
+        after: afterSrc,
+        matrices: { before: centeredMatrix(before), after: centeredMatrix(after) },
+        adjustments: { before: { ...DEFAULT_ADJUSTMENT }, after: { ...DEFAULT_ADJUSTMENT } },
+      }));
+      setSources(false);
+      setSession((value) => value + 1);
+    } catch {
+      setError('Не удалось открыть фотографии.');
+    } finally {
+      setPreparing(false);
+    }
+  }, [workspace.before, workspace.after, setWorkspace]);
   useEffect(() => {
-    let cancelled = false;
-    listCollageCases()
-      .then((rows) => {
-        if (!cancelled) {
-          setCases(rows);
-          setHasMore(rows.length === 24);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setHistoryError('Не удалось загрузить историю кейсов.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingHistory(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const editorChanged = useCallback(
+    if (
+      ready &&
+      !workspace.matrices &&
+      workspace.before &&
+      workspace.after &&
+      !sources &&
+      !preparing &&
+      (attempted.current?.[0] !== workspace.before || attempted.current?.[1] !== workspace.after)
+    ) {
+      attempted.current = [workspace.before, workspace.after];
+      build();
+    }
+  }, [ready, workspace.matrices, workspace.before, workspace.after, sources, preparing, build]);
+  const changed = useCallback(
     ({ adjustments, settings }) => {
       setWorkspace(
         (value) =>
@@ -162,379 +226,174 @@ function WebsiteImagesPage({ currentUser, onProdoctor, onActiveCase }) {
             : { ...value, adjustments, settings },
         'editor',
       );
-      setSaveMessage('');
     },
     [setWorkspace],
   );
-
-  const loadPhoto = async (key, file) => {
-    if (!file) return;
-    setError('');
-    const photoError = (message) => setPhotoErrors((current) => ({ ...current, [key]: message }));
-    photoError('');
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      photoError('Загрузите фото в формате JPG, PNG или WebP.');
-      return;
-    }
-    if (file.size > MAX_SIZE) {
-      photoError('Размер каждого фото не должен превышать 15 МБ.');
-      return;
-    }
-    setReading(true);
-    try {
-      const photo = await readPhoto(file);
-      setWorkspace((value) => ({ ...value, [key]: photo.src, matrices: null, adjustments: null }));
-      setSaveMessage('');
-    } catch (err) {
-      photoError(err.message);
-    } finally {
-      setReading(false);
-    }
+  const choose = (key, src) => {
+    setWorkspace((value) => ({ ...value, [key]: src, matrices: null, adjustments: null }));
+    setPhotoErrors((value) => ({ ...value, [key]: '' }));
   };
-
-  const dragPhoto = (event, key) => {
-    if (!event.dataTransfer.types.includes('Files')) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = locked ? 'none' : 'copy';
-    if (!locked) setDragTarget(key);
-  };
-
-  const dropPhoto = (event, key) => {
-    event.preventDefault();
-    setDragTarget(null);
-    if (locked) return;
-    const files = [...event.dataTransfer.files];
+  const upload = async (key, files) => {
     if (files.length !== 1) {
-      setError('Перетащите одно фото в поле «До» или «После».');
+      setPhotoErrors((value) => ({ ...value, [key]: 'Выберите одно фото.' }));
       return;
     }
-    loadPhoto(key, files[0]);
-  };
-
-  const generate = async () => {
     setBusy(true);
-    setError('');
     try {
-      const matrices = await prepareCollage(workspace.before, workspace.after, autoAlign);
-      setWorkspace((value) => ({
-        ...value,
-        matrices,
-        adjustments: {
-          before: { ...DEFAULT_ADJUSTMENT },
-          after: { ...DEFAULT_ADJUSTMENT },
-        },
-      }));
-      setFreshEditor(true);
-      setEditorSession((value) => value + 1);
-      setSaveMessage('');
+      const photo = await readSourcePhoto(files[0]);
+      choose(key, photo.src);
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(
-        typeof detail === 'string' ? detail : 'Не удалось создать коллаж. Попробуйте ещё раз.',
-      );
+      setPhotoErrors((value) => ({ ...value, [key]: err.message }));
     } finally {
       setBusy(false);
     }
   };
-
-  const saveCase = async (preview) => {
-    if (!workspace.name.trim()) {
-      setSaveMessage('Введите название кейса.');
-      return;
-    }
-    setSaving(true);
-    setSaveMessage('');
+  const save = async (preview) => {
+    setBusy(true);
+    setError('');
     try {
       const saved = await saveCollageCase(workspace.case_id, {
         name: workspace.name,
         state: workspace,
         preview,
       });
-      replaceWorkspace((value) => ({ ...value, case_id: saved.id, name: saved.name }));
-      setCases((rows) => [
-        { id: saved.id, name: saved.name, preview: saved.preview, updated_at: saved.updated_at },
-        ...rows.filter((row) => row.id !== saved.id),
-      ]);
-      setSaveMessage('Кейс сохранён в истории.');
+      await markSaved(saved);
+      onSaved?.(saved);
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      const message =
-        err.response?.status === 413
-          ? 'Фото слишком большие для сохранения.'
-          : [401, 403].includes(err.response?.status)
-            ? 'Сессия истекла. Войдите в аккаунт снова.'
-            : typeof detail === 'string'
-              ? detail
-              : 'Не удалось сохранить кейс. Попробуйте ещё раз.';
-      setSaveMessage(`${message} Черновик остаётся в редакторе.`);
+      setError(
+        typeof err.response?.data?.detail === 'string'
+          ? err.response.data.detail
+          : 'Не удалось сохранить оформление. Черновик остаётся доступен.',
+      );
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
-
-  const openCase = async (id, downloadOnly = false) => {
-    setCaseBusy(true);
-    setHistoryError('');
-    try {
-      const saved = await getCollageCase(id);
-      if (downloadOnly) {
-        const [before, after] = await Promise.all([
-          loadImage(saved.state.before),
-          loadImage(saved.state.after),
-          loadCollageFont(),
-        ]);
-        const blob = await exportCollage(
-          { before, after },
-          saved.state.matrices,
-          saved.state.adjustments,
-          saved.state.settings,
-        );
-        downloadBlob(
-          blob,
-          `${saved.name.replace(/[/\\:*?"<>|]/g, '-')}.${saved.state.settings.format}`,
-        );
-      } else {
-        replaceWorkspace({ ...saved.state, name: saved.name, case_id: saved.id });
-        setFreshEditor(false);
-        setEditorSession((value) => value + 1);
-        setSaveMessage('');
-        setError('');
-      }
-    } catch {
-      setHistoryError('Не удалось открыть кейс. Попробуйте ещё раз.');
-    } finally {
-      setCaseBusy(false);
-    }
-  };
-
-  const loadHistory = async () => {
-    setLoadingHistory(true);
-    setHistoryError('');
-    try {
-      const rows = await listCollageCases(historyError ? 0 : cases.length);
-      setCases((current) => (historyError ? rows : [...current, ...rows]));
-      setHasMore(rows.length === 24);
-    } catch {
-      setHistoryError('Не удалось загрузить историю кейсов.');
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+  if (!ready)
+    return (
+      <main className="case-main case-project-page">
+        <p className="case-status">Открываем оформление…</p>
+      </main>
+    );
   return (
-    <main className="case-main">
-      <section
-        ref={firstScreenRef}
-        aria-label="Подготовка коллажа"
-        className="case-upload-screen"
-        style={{ height: `calc(100dvh - ${navigationHeight}px)` }}
-      >
-        <CasePageHeading
-          title="Коллаж До/После"
-          disabled={locked}
-          onNew={() => {
-            setWorkspace(emptyWorkspace());
-            setPhotoErrors({});
-            setFreshEditor(false);
-            setSaveMessage('');
-            setError('');
-          }}
-        />
-        <div id="collage-photos" className="case-upload-pair">
-          {[
-            ['before', 'До'],
-            ['after', 'После'],
-          ].map(([key, title]) => (
-            <section
-              key={key}
-              onDragEnter={(e) => dragPhoto(e, key)}
-              onDragOver={(e) => dragPhoto(e, key)}
-              onDragLeave={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) setDragTarget(null);
-              }}
-              onDrop={(e) => dropPhoto(e, key)}
-              className={`case-upload-slot ${dragTarget === key ? 'is-dragging' : ''}`}
+    <main className="case-main case-format-workspace">
+      {sources || !workspace.matrices ? (
+        <section ref={first} className="case-project-page">
+          <header className="case-page-heading">
+            <div>
+              <CaseButton compact variant="ghost" onClick={onBack}>
+                ← К кейсу
+              </CaseButton>
+              <h1>{FORMAT_NAMES.website}</h1>
+            </div>
+            <CaseButton
+              disabled={!workspace.before || !workspace.after || busy || preparing}
+              variant="primary"
+              onClick={build}
             >
-              <div className="case-section-heading">
+              {preparing ? 'Открываем…' : 'Продолжить'}
+            </CaseButton>
+          </header>
+          <div className="case-upload-pair source-selection">
+            {[
+              ['before', 'До'],
+              ['after', 'После'],
+            ].map(([key, title]) => (
+              <section
+                className="case-panel"
+                key={key}
+                onDragOver={(e) => {
+                  if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (!busy) upload(key, [...e.dataTransfer.files]);
+                }}
+              >
                 <h2>{title}</h2>
-              </div>
-              <div className="case-upload-image">
-                {photos[key] ? (
+                {photos[key] && (
                   <img
+                    className="source-selection-preview"
                     src={photos[key].src}
-                    draggable={false}
                     alt={`Фото ${title.toLowerCase()}`}
                   />
-                ) : (
-                  <div className="case-empty-upload">
-                    <span className="case-upload-plus" aria-hidden="true">
-                      +
-                    </span>
-                    <span>Перетащите фото сюда</span>
-                  </div>
                 )}
-              </div>
-              <label className={`case-btn case-btn--secondary ${locked ? 'is-disabled' : ''}`}>
-                {photos[key] ? 'Заменить фото (JPG, PNG, WebP)' : 'Выбрать фото (JPG, PNG, WebP)'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={locked}
-                  className="sr-only"
-                  aria-invalid={Boolean(photoErrors[key])}
-                  aria-describedby={photoErrors[key] ? `photo-${key}-error` : undefined}
-                  onChange={(e) => {
-                    loadPhoto(key, e.target.files?.[0]);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-              {photoErrors[key] && (
-                <p id={`photo-${key}-error`} role="alert" className="case-field-error">
-                  {photoErrors[key]}
-                </p>
-              )}
-            </section>
-          ))}
-        </div>
-        <details className="case-details">
-          <summary>Описание кейса и врач</summary>
-          <div className="case-metadata-grid">
-            <CaseField label="Врач">
-              <input
-                placeholder="Имя врача"
-                value={workspace.doctor || ''}
-                maxLength={200}
-                onChange={(e) => {
-                  setWorkspace((s) => ({ ...s, doctor: e.target.value }));
-                  setSaveMessage('');
-                }}
-              />
-            </CaseField>
-            <CaseField label="Описание кейса">
+                <label className={`case-btn case-btn--secondary ${busy ? 'is-disabled' : ''}`}>
+                  Заменить фото (JPG, PNG, WebP)
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={busy}
+                    onChange={(e) => {
+                      upload(key, [...e.target.files]);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {photoErrors[key] && (
+                  <p role="alert" className="case-field-error">
+                    {photoErrors[key]}
+                  </p>
+                )}
+                <div className="source-picker">
+                  {project?.photos.map((photo, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={busy}
+                      aria-pressed={workspace[key] === photo.src}
+                      onClick={() => choose(key, photo.src)}
+                    >
+                      <img
+                        src={photo.src}
+                        alt={`Использовать фото ${i + 1} как ${title.toLowerCase()}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+          <CasePanel>
+            <CaseField label="Описание для сайта">
               <textarea
-                placeholder="Что было сделано"
-                rows={2}
-                maxLength={10000}
+                rows={3}
                 value={workspace.description || ''}
-                onChange={(e) => {
-                  setWorkspace((s) => ({ ...s, description: e.target.value }));
-                  setSaveMessage('');
-                }}
+                maxLength={10000}
+                onChange={(e) =>
+                  setWorkspace((value) => ({ ...value, description: e.target.value }))
+                }
               />
             </CaseField>
-          </div>
-        </details>
-        <div className="case-step-footer">
-          <div className="case-switch-label">
-            <Switch
-              checked={autoAlign}
-              disabled={locked}
-              label="Автоматически выровнять по зубам"
-              handleChange={() => setWorkspace((v) => ({ ...v, auto_align: !v.auto_align }))}
-            />
-            <span>Выровнять по зубам</span>
-          </div>
-          <div className="case-actions">
-            <CaseButton
-              disabled={locked || (!photos.before && !photos.after)}
-              onClick={() => {
-                setWorkspace((v) => ({
-                  ...v,
-                  before: v.after,
-                  after: v.before,
-                  matrices: null,
-                  adjustments: null,
-                }));
-                setError('');
-              }}
-            >
-              Поменять местами
-            </CaseButton>
-            <CaseButton
-              variant="primary"
-              onClick={generate}
-              disabled={!photos.before || !photos.after || locked}
-            >
-              {busy
-                ? autoAlign
-                  ? 'Выравниваем фото…'
-                  : 'Открываем редактор…'
-                : 'Открыть редактор'}
-            </CaseButton>
-          </div>
-        </div>
-        {(error || draftStatus) && (
-          <p role={error ? 'alert' : 'status'} className={`case-status ${error ? 'is-error' : ''}`}>
-            {error || draftStatus}
-          </p>
-        )}
-      </section>
-      {result && (
+          </CasePanel>
+          {error && (
+            <p className="case-field-error" role="alert">
+              {error}
+            </p>
+          )}
+        </section>
+      ) : (
         <CollageEditor
-          key={editorSession}
+          key={session}
           photos={photos}
-          matrices={result}
-          initialState={freshEditor ? null : workspace}
-          onChange={editorChanged}
+          matrices={workspace.matrices}
+          initialState={workspace}
+          onChange={changed}
           caseName={workspace.name}
-          onNameChange={(name) => {
-            setWorkspace((v) => ({ ...v, name }));
-            setSaveMessage('');
-          }}
-          onSave={saveCase}
-          saving={saving}
-          saveMessage={saveMessage}
+          onNameChange={(name) => setWorkspace((value) => ({ ...value, name }))}
+          onSave={save}
+          saving={busy}
+          saveMessage={error}
           caseId={workspace.case_id}
           draftStatus={draftStatus}
           doctor={workspace.doctor}
           description={workspace.description}
-          onSources={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          onProdoctor={onProdoctor}
+          onSources={() => setSources(true)}
+          onBack={onBack}
+          simplified
         />
       )}
-      <CasePanel title="Сохранённые кейсы" className="case-history">
-        {!cases.length && (
-          <p className="case-empty">
-            {loadingHistory ? 'Загружаем кейсы…' : 'Здесь появятся ваши сохранённые кейсы.'}
-          </p>
-        )}
-        <div className="case-history-grid">
-          {cases.map((item) => (
-            <article key={item.id} className="case-history-card">
-              <img src={item.preview} alt={`Коллаж: ${item.name}`} />
-              <div className="case-card-body">
-                <h3>{item.name}</h3>
-                <p className="case-hint">{caseDate(item.updated_at).toLocaleString('ru-RU')}</p>
-                <div className="case-actions">
-                  <CaseButton disabled={locked} onClick={() => openCase(item.id)}>
-                    Открыть
-                  </CaseButton>
-                  <CaseButton
-                    variant="ghost"
-                    disabled={locked}
-                    onClick={() => openCase(item.id, true)}
-                  >
-                    Скачать
-                  </CaseButton>
-                </div>
-                <CaseButton variant="ghost" disabled={locked} onClick={() => onProdoctor(item.id)}>
-                  Для ПроДокторов →
-                </CaseButton>
-              </div>
-            </article>
-          ))}
-        </div>
-        {historyError && (
-          <p role="alert" className="case-status is-error">
-            {historyError}
-          </p>
-        )}
-        {(hasMore || historyError) && (
-          <CaseButton disabled={loadingHistory || locked} onClick={loadHistory}>
-            {loadingHistory ? 'Загружаем…' : historyError ? 'Повторить' : 'Показать ещё'}
-          </CaseButton>
-        )}
-      </CasePanel>
     </main>
   );
 }

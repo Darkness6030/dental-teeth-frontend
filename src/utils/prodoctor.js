@@ -1,5 +1,6 @@
 import { loadImage, downloadBlob } from './collageCanvas';
 import { zipImages } from './zipImages';
+import { rotatedSize, photoFilter } from './photoGeometry';
 
 export const textLength = (text) => Array.from(text.replace(/\s/gu, '')).length;
 export function adaptDescription(text) {
@@ -25,12 +26,13 @@ export async function readCasePhoto(file) {
   const image = await loadImage(src);
   if (image.naturalWidth * image.naturalHeight > 24000000)
     throw new Error('Разрешение фото не должно превышать 24 мегапикселя.');
-  return { src, stage: 'before', zoom: 100, x: 50, y: 50 };
+  return { src, filename: file.name.slice(0, 255), stage: 'before', zoom: 100, x: 50, y: 50 };
 }
 
 export async function renderCasePhoto(photo, size = 1200) {
   const image = await loadImage(photo.src);
-  const side = (Math.min(image.naturalWidth, image.naturalHeight) * 100) / photo.zoom;
+  const bounds = rotatedSize(image.naturalWidth, image.naturalHeight, photo.rotation || 0);
+  const side = (Math.min(bounds.width, bounds.height) * 100) / photo.zoom;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
@@ -38,17 +40,18 @@ export async function renderCasePhoto(photo, size = 1200) {
   ctx.fillRect(0, 0, size, size);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(
-    image,
-    ((image.naturalWidth - side) * photo.x) / 100,
-    ((image.naturalHeight - side) * photo.y) / 100,
-    side,
-    side,
-    0,
-    0,
-    size,
-    size,
+  ctx.save();
+  ctx.scale(size / side, size / side);
+  ctx.translate(
+    (-(bounds.width - side) * photo.x) / 100,
+    (-(bounds.height - side) * photo.y) / 100,
   );
+  ctx.translate(bounds.width / 2, bounds.height / 2);
+  ctx.rotate(((photo.rotation || 0) * Math.PI) / 180);
+  ctx.scale(photo.flipped ? -1 : 1, 1);
+  ctx.filter = photoFilter(photo);
+  ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+  ctx.restore();
   return canvas;
 }
 

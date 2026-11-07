@@ -1,0 +1,112 @@
+import { useState } from 'react';
+import { CaseButton, CaseRange } from './CaseUI.jsx';
+import { normalizeAngle } from '../utils/photoGeometry';
+
+export default function PhotoTools({
+  edit,
+  onChange,
+  grid,
+  onGridChange,
+  minimumZoom = 50,
+  maximumZoom = 200,
+}) {
+  const [tab, setTab] = useState('crop');
+  return (
+    <div className="photo-tools">
+      <div
+        className="case-segmented photo-tool-tabs"
+        role="group"
+        aria-label="Настройки фотографии"
+      >
+        <button type="button" aria-pressed={tab === 'crop'} onClick={() => setTab('crop')}>
+          Кадрирование
+        </button>
+        <button type="button" aria-pressed={tab === 'color'} onClick={() => setTab('color')}>
+          Свет и цвет
+        </button>
+      </div>
+      {tab === 'crop' ? (
+        <>
+          <CaseRange
+            label="Масштаб"
+            value={edit.zoom}
+            min={Math.min(minimumZoom, edit.zoom)}
+            max={Math.max(maximumZoom, edit.zoom)}
+            suffix="%"
+            onChange={(value) => onChange('zoom', value)}
+          />
+          <div className="photo-rotate-controls">
+            <CaseButton
+              compact
+              aria-label="Повернуть фото на 90 градусов влево"
+              onClick={() => onChange('rotation', normalizeAngle((edit.rotation || 0) - 90))}
+            >
+              ↶ 90°
+            </CaseButton>
+            <CaseButton
+              compact
+              aria-label="Повернуть фото на 90 градусов вправо"
+              onClick={() => onChange('rotation', normalizeAngle((edit.rotation || 0) + 90))}
+            >
+              ↷ 90°
+            </CaseButton>
+            <CaseButton
+              compact
+              aria-pressed={!!edit.flipped}
+              onClick={() => onChange('flipped', !edit.flipped)}
+            >
+              Отразить
+            </CaseButton>
+          </div>
+          <CaseRange
+            numberOnly
+            label="Наклон"
+            value={edit.rotation || 0}
+            min={-180}
+            max={180}
+            step={0.5}
+            suffix="°"
+            onChange={(value) => onChange('rotation', value)}
+          />
+          <CaseButton
+            compact
+            aria-pressed={grid}
+            onClick={() => onGridChange(!grid)}
+            className={grid ? 'is-selected' : ''}
+          >
+            Сетка
+          </CaseButton>
+        </>
+      ) : (
+        <div className="photo-color-controls">
+          {[
+            ['brightness', 'Яркость', 50, 150],
+            ['contrast', 'Контраст', 50, 150],
+            ['saturation', 'Насыщенность', 0, 200],
+          ].map(([field, label, min, max]) => (
+            <CaseRange
+              key={field}
+              label={label}
+              value={edit[field] ?? 100}
+              min={min}
+              max={max}
+              suffix="%"
+              onChange={(value) => onChange(field, value)}
+            />
+          ))}
+          <CaseButton
+            compact
+            variant="ghost"
+            onClick={() => {
+              onChange('brightness', 100);
+              onChange('contrast', 100);
+              onChange('saturation', 100);
+            }}
+          >
+            Сбросить цвет
+          </CaseButton>
+        </div>
+      )}
+    </div>
+  );
+}

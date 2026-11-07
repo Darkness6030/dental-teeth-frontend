@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { getUser, removeAccessToken } from './api';
 import Loader from './components/Loader';
 import NavigationBar from './components/NavigationBar';
@@ -59,7 +59,8 @@ function App() {
                 path="/images"
                 element={<ImagesPage key={currentUser?.id} currentUser={currentUser} />}
               />
-              <Route path="/" element={<MainPage currentUser={currentUser} />} />
+              <Route path="/" element={<Navigate to="/images" replace />} />
+              <Route path="/markup" element={<MainPage currentUser={currentUser} />} />
               <Route path="/admin" element={<AdminPage currentUser={currentUser} />} />
               <Route path="/login" element={<LoginPage setCurrentUser={setCurrentUser} />} />
             </Routes>

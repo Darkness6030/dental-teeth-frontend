@@ -35,7 +35,11 @@ export const emptyProdoctorWorkspace = () => ({
   source_case_id: null,
 });
 
-export default function useCollageWorkspace(userId, mode = 'website') {
+export default function useCollageWorkspace(
+  userId,
+  mode = 'website',
+  { seed = null, fresh = false, savedAt = null } = {},
+) {
   const storageKey = mode === 'website' ? userId : `${userId}:prodoctor`;
   const [workspace, setWorkspace, history] = useUndoState(
     mode === 'website' ? emptyWorkspace : emptyProdoctorWorkspace,
@@ -55,11 +59,22 @@ export default function useCollageWorkspace(userId, mode = 'website') {
       ([local, server]) => {
         if (cancelled) return;
         const choices = [local, server]
-          .filter((r) => r.status === 'fulfilled' && r.value?.state)
+          .filter(
+            (r) =>
+              r.status === 'fulfilled' &&
+              r.value?.state &&
+              (!seed ||
+                (!fresh &&
+                  r.value.state.project_id === seed.project_id &&
+                  (r.value.state.case_id || null) === (seed.case_id || null) &&
+                  (!savedAt || caseDate(r.value.updated_at) > caseDate(savedAt)))),
+          )
           .map((r) => r.value)
           .sort((a, b) => caseDate(b.updated_at) - caseDate(a.updated_at));
         const state =
-          choices[0]?.state || (mode === 'website' ? emptyWorkspace() : emptyProdoctorWorkspace());
+          choices[0]?.state ||
+          seed ||
+          (mode === 'website' ? emptyWorkspace() : emptyProdoctorWorkspace());
         skipInitialSave.current = true;
         replaceWorkspace(
           mode === 'website'
@@ -81,7 +96,7 @@ export default function useCollageWorkspace(userId, mode = 'website') {
     return () => {
       cancelled = true;
     };
-  }, [userId, mode, storageKey, replaceWorkspace]);
+  }, [userId, mode, storageKey, replaceWorkspace, seed, fresh, savedAt]);
 
   useEffect(() => {
     if (!ready || !userId) return;
@@ -157,6 +172,17 @@ export default function useCollageWorkspace(userId, mode = 'website') {
     setWorkspace,
     history,
     replaceWorkspace,
+    markSaved: async (saved) => {
+      // Supersede pending pre-save snapshots before leaving the editor.
+      revision.current += 1;
+      await Promise.allSettled([saveChain.current, localSaveChain.current]);
+      const state = { ...saved.state, name: saved.name, case_id: saved.id };
+      await Promise.allSettled([
+        saveCollageDraft(state),
+        writeLocalDraft(storageKey, { state, updated_at: new Date().toISOString() }),
+      ]);
+      replaceWorkspace(state);
+    },
     ready,
     draftStatus: hasDraftContent ? draftStatus : '',
   };

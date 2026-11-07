@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 // Node has no font asset loader; the renderer itself needs no DOM or loaded font.
-const source = (
-  await readFile(new URL('../src/utils/collageCanvas.js', import.meta.url), 'utf8')
-).replace(/import fontUrl from [^;]+;/, "const fontUrl = '';");
+const source = (await readFile(new URL('../src/utils/collageCanvas.js', import.meta.url), 'utf8'))
+  .replace(/import fontUrl from [^;]+;/, "const fontUrl = '';")
+  .replace(
+    "'./photoGeometry'",
+    JSON.stringify(new URL('../src/utils/photoGeometry.js', import.meta.url).href),
+  );
 const { drawCollage, DEFAULT_EXPORT, photoRotation } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
 );

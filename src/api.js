@@ -122,3 +122,10 @@ export const saveCollageCase = async (id, payload) =>
 export const getCollageDraft = async (mode = 'website') =>
   (await client.get('/images/draft', { params: { mode } })).data;
 export const saveCollageDraft = async (state) => (await client.put('/images/draft', state)).data;
+
+export const listCaseProjects = async (offset = 0, q = '') =>
+  (await client.get('/images/projects', { params: { offset, limit: 24, q } })).data;
+export const getCaseProject = async (id) => (await client.get(`/images/projects/${id}`)).data;
+export const saveCaseProject = async (id, data) =>
+  (await (id ? client.put(`/images/projects/${id}`, data) : client.post('/images/projects', data)))
+    .data;
