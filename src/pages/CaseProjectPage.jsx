@@ -5,7 +5,7 @@ import SourcePhotos from '../components/SourcePhotos.jsx';
 import { sourceThumbnail } from '../utils/sourcePhotos';
 import { DIRECTIONS, FORMAT_NAMES } from '../utils/caseWorkflow';
 import { caseDate } from '../utils/caseDates';
-import { renderSavedCasePreview } from '../utils/casePreview';
+import CasePhotoStack from '../components/CasePhotoStack.jsx';
 
 const emptyProject = () => ({
   patient: '',
@@ -264,7 +264,7 @@ export function NewCaseProjectPage({ mode, onSelectType, onBack, onCreated }) {
 export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) {
   const [project, setProject] = useState(null);
   const [savedProject, setSavedProject] = useState(null);
-  const [displayPreview, setDisplayPreview] = useState('');
+  const [stackPhotos, setStackPhotos] = useState([]);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
@@ -276,12 +276,11 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
         if (cancelled) return;
         setProject(data);
         setSavedProject(data);
-        setDisplayPreview(data.preview);
-        if (data.variants[0])
+        setStackPhotos(data.photos);
+        if (data.mode === 'prodoctor' && data.variants[0])
           getCollageCase(data.variants[0].id)
-            .then((variant) => renderSavedCasePreview(variant.state))
-            .then((preview) => {
-              if (!cancelled && preview) setDisplayPreview(preview);
+            .then((variant) => {
+              if (!cancelled && variant.state.photos?.length) setStackPhotos(variant.state.photos);
             })
             .catch(() => {});
       })
@@ -296,13 +295,11 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
     if (!project.name.trim()) throw new Error('Введите название кейса.');
     const saved = await saveCaseProject(id, {
       ...project,
-      preview: project.variants.length
-        ? displayPreview || project.preview
-        : await sourceThumbnail(project.photos[0]),
+      preview: project.variants.length ? project.preview : await sourceThumbnail(project.photos[0]),
     });
     setProject(saved);
     setSavedProject(saved);
-    setDisplayPreview(saved.preview);
+    if (saved.mode !== 'prodoctor' || !saved.variants.length) setStackPhotos(saved.photos);
     setEditing(false);
     return saved;
   };
@@ -435,12 +432,13 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
       )}
       {!editing && (
         <section className="case-saved-preview">
-          <img
-            src={displayPreview || project.preview || project.photos[0]?.src}
-            alt={project.name}
+          <CasePhotoStack
+            photos={
+              stackPhotos.length ? stackPhotos : project.preview ? [{ src: project.preview }] : []
+            }
           />
           <div>
-            <p>{project.photos.length} фото</p>
+            <p>{stackPhotos.length} фото</p>
             <time>{caseDate(project.updated_at).toLocaleDateString('ru-RU')}</time>
           </div>
         </section>

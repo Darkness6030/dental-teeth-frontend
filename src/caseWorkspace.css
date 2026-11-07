@@ -1626,3 +1626,58 @@
   background: #f8f9fb;
   border-color: var(--case-line);
 }
+
+.case-photo-stack {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: clamp(220px, 28vw, 340px);
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.case-photo-stack:disabled {
+  cursor: default;
+}
+.case-photo-stack > img {
+  position: absolute;
+  inset: 12px;
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
+  object-fit: contain;
+  border: 1px solid var(--case-line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px #25314a12;
+  transform: translate(calc(var(--stack-depth) * 3px), calc(var(--stack-depth) * -3px))
+    rotate(var(--stack-angle));
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+.case-photo-stack > img.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.case-photo-stack-count {
+  position: absolute;
+  z-index: 10;
+  right: 22px;
+  bottom: 22px;
+  padding: 4px 9px;
+  border: 1px solid #e3e7ed;
+  border-radius: 6px;
+  background: #fffffff0;
+  color: #59667a;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .case-photo-stack > img {
+    transition: none;
+  }
+}
