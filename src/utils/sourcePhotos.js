@@ -1,4 +1,4 @@
-import { loadImage } from './collageCanvas';
+import { loadImage, collageThumbnail } from './collageCanvas';
 
 export async function readSourcePhoto(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
@@ -17,13 +17,7 @@ export async function readSourcePhoto(file) {
 }
 export async function sourceThumbnail(photo) {
   if (!photo) return '';
-  const image = await loadImage(photo.src);
-  const canvas = document.createElement('canvas');
-  const scale = 320 / Math.max(image.naturalWidth, image.naturalHeight);
-  canvas.width = Math.round(image.naturalWidth * scale);
-  canvas.height = Math.round(image.naturalHeight * scale);
-  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.8);
+  return collageThumbnail(await loadImage(photo.src));
 }
 
 // Convert the original without cropping; framing belongs to the photo editor.

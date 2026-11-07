@@ -18,9 +18,9 @@ function PhotoPreview({ photo, className = '' }) {
   const [src, setSrc] = useState('');
   useEffect(() => {
     let cancelled = false;
-    renderCasePhoto(photo, 400)
+    renderCasePhoto(photo, 600)
       .then((canvas) => {
-        if (!cancelled) setSrc(canvas.toDataURL('image/jpeg', 0.85));
+        if (!cancelled) setSrc(canvas.toDataURL('image/jpeg', 0.92));
       })
       .catch(() => {
         if (!cancelled) setSrc('');
@@ -134,11 +134,11 @@ export default function ProdoctorPage({
     setBusy(true);
     setMessage('');
     try {
-      const canvas = await renderCasePhoto(photos[0], 320);
+      const canvas = await renderCasePhoto(photos[0], 1024);
       const saved = await saveCollageCase(workspace.case_id, {
         name: workspace.name,
         state: workspace,
-        preview: canvas.toDataURL('image/jpeg', 0.8),
+        preview: canvas.toDataURL('image/jpeg', 0.92),
       });
       await markSaved(saved);
       onSaved?.(saved);

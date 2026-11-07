@@ -59,7 +59,7 @@ export default function PhotoTools({
             </CaseButton>
           </div>
           <CaseRange
-            numberOnly
+            sliderOnly
             label="Наклон"
             value={edit.rotation || 0}
             min={-180}

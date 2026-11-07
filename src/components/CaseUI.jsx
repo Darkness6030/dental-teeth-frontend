@@ -88,6 +88,7 @@ export function CaseRange({
   suffix = '',
   ariaLabel = label,
   numberOnly = false,
+  sliderOnly = false,
 }) {
   const id = useId();
   const [input, setInput] = useState(String(Math.round(value * 10) / 10));
@@ -100,37 +101,41 @@ export function CaseRange({
       <div className="case-range-heading">
         <label htmlFor={`${id}-${numberOnly ? 'number' : 'range'}`}>{label}</label>
         <span className="case-range-number">
-          <input
-            id={`${id}-number`}
-            aria-label={`${ariaLabel}: точное значение`}
-            type="number"
-            min={min}
-            max={max}
-            step={step}
-            value={input}
-            onChange={(event) => {
-              const raw = event.target.value;
-              setInput(raw);
-              setEdited(true);
-              if (
-                raw !== '' &&
-                Number.isFinite(Number(raw)) &&
-                Number(raw) >= min &&
-                Number(raw) <= max
-              )
-                onChange(Number(raw));
-            }}
-            onBlur={() => {
-              if (!edited) return;
-              const next =
-                input === '' || !Number.isFinite(Number(input))
-                  ? value
-                  : Math.max(min, Math.min(max, Number(input)));
-              onChange(next);
-              setInput(String(Math.round(next * 10) / 10));
-              setEdited(false);
-            }}
-          />
+          {sliderOnly ? (
+            <output htmlFor={`${id}-range`}>{Math.round(value * 10) / 10}</output>
+          ) : (
+            <input
+              id={`${id}-number`}
+              aria-label={`${ariaLabel}: точное значение`}
+              type="number"
+              min={min}
+              max={max}
+              step={step}
+              value={input}
+              onChange={(event) => {
+                const raw = event.target.value;
+                setInput(raw);
+                setEdited(true);
+                if (
+                  raw !== '' &&
+                  Number.isFinite(Number(raw)) &&
+                  Number(raw) >= min &&
+                  Number(raw) <= max
+                )
+                  onChange(Number(raw));
+              }}
+              onBlur={() => {
+                if (!edited) return;
+                const next =
+                  input === '' || !Number.isFinite(Number(input))
+                    ? value
+                    : Math.max(min, Math.min(max, Number(input)));
+                onChange(next);
+                setInput(String(Math.round(next * 10) / 10));
+                setEdited(false);
+              }}
+            />
+          )}
           {suffix && <span aria-hidden="true">{suffix}</span>}
         </span>
       </div>

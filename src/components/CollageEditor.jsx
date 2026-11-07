@@ -357,9 +357,6 @@ export default function CollageEditor({
               }}
             />
           </div>
-          <p className="case-hint">
-            Перетаскивайте фото или разделитель. Стрелки — точнее, Shift + стрелки — быстрее.
-          </p>
         </div>
         <aside className="case-editor-controls">
           <fieldset disabled={!images || downloading || saving}>
@@ -430,6 +427,7 @@ export default function CollageEditor({
               </CaseField>
               {settings.format !== 'png' && (
                 <CaseRange
+                  sliderOnly
                   label="Качество"
                   ariaLabel="Качество картинки"
                   value={settings.quality}

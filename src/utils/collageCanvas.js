@@ -177,7 +177,10 @@ export function drawCollage(
   grid = false,
 ) {
   settings = normalizeExportSettings(settings);
-  const ratio = preview ? Math.min(1, 1600 / Math.max(settings.width, settings.height)) : 1;
+  const pixelRatio = typeof window === 'undefined' ? 1 : Math.max(1, window.devicePixelRatio || 1);
+  const ratio = preview
+    ? Math.min(pixelRatio, 2560 / Math.max(settings.width, settings.height))
+    : 1;
   canvas.width = Math.round(settings.width * ratio);
   canvas.height = Math.round(settings.height * ratio);
   const ctx = canvas.getContext('2d');
@@ -225,13 +228,15 @@ export function drawCollage(
     if (selected) {
       ctx.save();
       ctx.beginPath();
-      const left = selected === 'before' ? 0 : divider;
-      const width = selected === 'before' ? divider : frame.width - divider;
-      ctx.rect(frame.x + left, frame.y, width, frame.height);
+      // Keep the complete stroke visible at the outer edges, including the curves.
+      const splitX = frame.x + divider;
+      const left = selected === 'before' ? 0 : splitX;
+      const layerWidth = selected === 'before' ? splitX : width - splitX;
+      ctx.rect(left, 0, layerWidth, height);
       ctx.clip();
       roundedRect(ctx, frame.x, frame.y, frame.width, frame.height, 100 * scale);
       ctx.strokeStyle = '#607fa8';
-      ctx.lineWidth = 5 * scale;
+      ctx.lineWidth = 3 * scale;
       ctx.stroke();
       ctx.restore();
     }
@@ -302,11 +307,14 @@ async function encodeCanvas(canvas, settings) {
 
 export function collageThumbnail(canvas) {
   const preview = document.createElement('canvas');
-  const ratio = Math.min(1, 320 / Math.max(canvas.width, canvas.height));
+  const ratio = Math.min(1, 1024 / Math.max(canvas.width, canvas.height));
   preview.width = Math.round(canvas.width * ratio);
   preview.height = Math.round(canvas.height * ratio);
-  preview.getContext('2d').drawImage(canvas, 0, 0, preview.width, preview.height);
-  return preview.toDataURL('image/jpeg', 0.75);
+  const ctx = preview.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, 0, 0, preview.width, preview.height);
+  return preview.toDataURL('image/jpeg', 0.92);
 }
 
 export function downloadBlob(blob, filename) {

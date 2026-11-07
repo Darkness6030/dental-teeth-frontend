@@ -162,8 +162,7 @@
   cursor: not-allowed;
 }
 .case-workspace button:focus-visible,
-.case-workspace summary:focus-visible,
-.case-btn:focus-within {
+.case-workspace summary:focus-visible {
   outline: 2px solid #8b98ac;
   outline-offset: 3px;
 }
@@ -1573,4 +1572,13 @@
   .case-detail {
     display: flex;
   }
+}
+
+.case-workspace button:focus:not(:focus-visible) {
+  outline: none;
+}
+.case-range-number output {
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getCaseProject, saveCaseProject } from '../api';
+import { getCaseProject, saveCaseProject, getCollageCase } from '../api';
 import { CaseButton, CaseField, CasePanel } from '../components/CaseUI.jsx';
 import SourcePhotos from '../components/SourcePhotos.jsx';
 import { sourceThumbnail } from '../utils/sourcePhotos';
 import { DIRECTIONS, FORMAT_NAMES } from '../utils/caseWorkflow';
 import { caseDate } from '../utils/caseDates';
+import { renderSavedCasePreview } from '../utils/casePreview';
 
 const emptyProject = () => ({
   patient: '',
@@ -262,6 +263,8 @@ export function NewCaseProjectPage({ mode, onSelectType, onBack, onCreated }) {
 }
 export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) {
   const [project, setProject] = useState(null);
+  const [savedProject, setSavedProject] = useState(null);
+  const [displayPreview, setDisplayPreview] = useState('');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
@@ -270,7 +273,17 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
     let cancelled = false;
     getCaseProject(id)
       .then((data) => {
-        if (!cancelled) setProject(data);
+        if (cancelled) return;
+        setProject(data);
+        setSavedProject(data);
+        setDisplayPreview(data.preview);
+        if (data.variants[0])
+          getCollageCase(data.variants[0].id)
+            .then((variant) => renderSavedCasePreview(variant.state))
+            .then((preview) => {
+              if (!cancelled && preview) setDisplayPreview(preview);
+            })
+            .catch(() => {});
       })
       .catch(() => {
         if (!cancelled) setError('Не удалось открыть кейс.');
@@ -283,11 +296,20 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
     if (!project.name.trim()) throw new Error('Введите название кейса.');
     const saved = await saveCaseProject(id, {
       ...project,
-      preview: project.variants.length ? project.preview : await sourceThumbnail(project.photos[0]),
+      preview: project.variants.length
+        ? displayPreview || project.preview
+        : await sourceThumbnail(project.photos[0]),
     });
     setProject(saved);
+    setSavedProject(saved);
+    setDisplayPreview(saved.preview);
     setEditing(false);
     return saved;
+  };
+  const cancelEdit = () => {
+    setProject(savedProject);
+    setEditing(false);
+    setError('');
   };
   const save = async () => {
     setBusy(true);
@@ -324,8 +346,13 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
     <main className={`case-main case-project-page ${editing ? '' : 'case-detail'}`}>
       <header className="case-page-heading">
         <div>
-          <CaseButton variant="ghost" compact onClick={onBack}>
-            ← Все кейсы
+          <CaseButton
+            variant="ghost"
+            compact
+            disabled={busy || reading}
+            onClick={editing ? cancelEdit : onBack}
+          >
+            {editing ? '← К кейсу' : '← Все кейсы'}
           </CaseButton>
           <h1>{project.patient || project.name}</h1>
           {project.patient && <p>{project.name}</p>}
@@ -335,17 +362,27 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
           <CaseButton
             variant="primary"
             disabled={busy || reading || project.photos.length < 2}
-            onClick={open}
+            onClick={editing ? save : open}
           >
-            {project.variants.length ? 'Редактировать' : 'Открыть редактор'}
+            {editing
+              ? busy
+                ? 'Сохраняем…'
+                : 'Сохранить'
+              : project.variants.length
+                ? 'Редактировать'
+                : 'Открыть редактор'}
           </CaseButton>
         </div>
       </header>
       <CasePanel
         title="Сведения о кейсе"
         action={
-          <CaseButton compact disabled={busy} onClick={() => setEditing(!editing)}>
-            {editing ? 'Свернуть' : 'Изменить'}
+          <CaseButton
+            compact
+            disabled={busy || reading}
+            onClick={editing ? cancelEdit : () => setEditing(true)}
+          >
+            {editing ? 'Отмена' : 'Изменить'}
           </CaseButton>
         }
       >
@@ -389,11 +426,6 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
             disabled={busy}
             onReadingChange={setReading}
           />
-          <div className="case-actions">
-            <CaseButton variant="primary" disabled={busy || reading} onClick={save}>
-              {busy ? 'Сохраняем…' : 'Сохранить изменения'}
-            </CaseButton>
-          </div>
         </>
       )}
       {error && (
@@ -403,7 +435,10 @@ export default function CaseProjectPage({ id, onBack, onEdit, onCreateFormat }) 
       )}
       {!editing && (
         <section className="case-saved-preview">
-          <img src={project.preview || project.photos[0]?.src} alt={project.name} />
+          <img
+            src={displayPreview || project.preview || project.photos[0]?.src}
+            alt={project.name}
+          />
           <div>
             <p>{project.photos.length} фото</p>
             <time>{caseDate(project.updated_at).toLocaleDateString('ru-RU')}</time>
